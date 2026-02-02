@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.middleware.error_handler import register_error_handlers
-from app.routes import health, rooms, users
+from app.routes import health, listings, matches, rooms, transactions, users
 
 
 def create_app() -> FastAPI:
@@ -28,6 +28,9 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(users.router)
     app.include_router(rooms.router)
+    app.include_router(listings.router)
+    app.include_router(matches.router)
+    app.include_router(transactions.router)
 
     return app
 
