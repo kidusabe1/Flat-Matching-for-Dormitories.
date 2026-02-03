@@ -124,7 +124,7 @@ pip install -r requirements-dev.txt
 # https://cloud.google.com/sdk/docs/install
 
 gcloud auth login
-gcloud config set project <your-project-id>
+gcloud config set project barilan-exchange
 
 # Enable required APIs
 gcloud services enable firestore.googleapis.com
@@ -148,7 +148,7 @@ cp .env.example .env
 
 Edit `.env`:
 ```
-PROJECT_ID=<your-gcp-project-id>
+PROJECT_ID=barilan-exchange
 ENVIRONMENT=development
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
 CORS_ORIGINS=["http://localhost:3000"]
@@ -181,7 +181,7 @@ All 90 tests should pass. Tests use mocked Firestore — no live database needed
 ### 1. Set your project
 
 ```bash
-gcloud config set project <your-project-id>
+gcloud config set project barilan-exchange
 ```
 
 ### 2. Deploy
@@ -197,8 +197,10 @@ gcloud run deploy biu-dorm-exchange \
   --min-instances 0 \
   --max-instances 2 \
   --timeout 60 \
-  --set-env-vars "ENVIRONMENT=production,PROJECT_ID=<your-project-id>"
+  --set-env-vars "ENVIRONMENT=production,PROJECT_ID=barilan-exchange"
 ```
+
+service-url:  https://biu-dorm-exchange-nlt4ri4bza-uc.a.run.app
 
 This builds the Docker image via Cloud Build and deploys to Cloud Run. No `GOOGLE_APPLICATION_CREDENTIALS` is needed in production — Cloud Run provides credentials automatically.
 
