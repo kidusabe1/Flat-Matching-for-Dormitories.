@@ -129,7 +129,7 @@ async def _confirm_lease_transfer_txn(
     now = datetime.now(timezone.utc)
 
     if tx_data["transaction_type"] == "LEASE_TRANSFER":
-        # Transfer room occupancy
+        # --- All reads first ---
         room_ref = db.collection("rooms").document(tx_data["room_id"])
         room_snap = await room_ref.get(transaction=transaction)
         if not room_snap.exists:
@@ -139,43 +139,45 @@ async def _confirm_lease_transfer_txn(
         if room["occupant_uid"] != tx_data["from_uid"]:
             raise ConflictError("Room occupant has changed — cannot complete transfer")
 
-        # Update room occupant
+        match_ref = db.collection("matches").document(tx_data["match_id"])
+        match_snap = await match_ref.get(transaction=transaction)
+
+        listing_ref = None
+        if match_snap.exists:
+            match_d = match_snap.to_dict()
+            listing_ref = db.collection("listings").document(match_d["listing_id"])
+
+        # --- All writes after reads ---
         transaction.update(room_ref, {
             "occupant_uid": tx_data["to_uid"],
             "updated_at": now,
         })
 
-        # Update from_user: clear room
         from_user_ref = db.collection("users").document(tx_data["from_uid"])
         transaction.update(from_user_ref, {
             "current_room_id": None,
             "updated_at": now,
         })
 
-        # Update to_user: set room
         to_user_ref = db.collection("users").document(tx_data["to_uid"])
         transaction.update(to_user_ref, {
             "current_room_id": tx_data["room_id"],
             "updated_at": now,
         })
 
-        # Complete the listing via the match
-        match_ref = db.collection("matches").document(tx_data["match_id"])
-        match_snap = await match_ref.get(transaction=transaction)
         if match_snap.exists:
-            match_d = match_snap.to_dict()
-            listing_ref = db.collection("listings").document(match_d["listing_id"])
-            transaction.update(listing_ref, {
-                "status": LeaseTransferStatus.COMPLETED.value,
-                "updated_at": now,
-            })
             transaction.update(match_ref, {
                 "status": MatchStatus.ACCEPTED.value,
                 "updated_at": now,
             })
+            if listing_ref:
+                transaction.update(listing_ref, {
+                    "status": LeaseTransferStatus.COMPLETED.value,
+                    "updated_at": now,
+                })
 
     elif tx_data["transaction_type"] == "SWAP":
-        # Swap: update two rooms, two users atomically
+        # --- All reads first ---
         room_a_ref = db.collection("rooms").document(tx_data["party_a_room_id"])
         room_b_ref = db.collection("rooms").document(tx_data["party_b_room_id"])
         room_a_snap = await room_a_ref.get(transaction=transaction)
@@ -192,7 +194,17 @@ async def _confirm_lease_transfer_txn(
         if room_b["occupant_uid"] != tx_data["party_b_uid"]:
             raise ConflictError("Room B occupant has changed")
 
-        # Swap occupants
+        # Read all matches and their listings before any writes
+        match_listing_pairs = []
+        for mid in (tx_data.get("match_ids") or []):
+            m_ref = db.collection("matches").document(mid)
+            m_snap = await m_ref.get(transaction=transaction)
+            if m_snap.exists:
+                m_data = m_snap.to_dict()
+                l_ref = db.collection("listings").document(m_data["listing_id"])
+                match_listing_pairs.append((m_ref, l_ref))
+
+        # --- All writes after reads ---
         transaction.update(room_a_ref, {
             "occupant_uid": tx_data["party_b_uid"],
             "updated_at": now,
@@ -202,7 +214,6 @@ async def _confirm_lease_transfer_txn(
             "updated_at": now,
         })
 
-        # Update user profiles
         user_a_ref = db.collection("users").document(tx_data["party_a_uid"])
         user_b_ref = db.collection("users").document(tx_data["party_b_uid"])
         transaction.update(user_a_ref, {
@@ -214,21 +225,15 @@ async def _confirm_lease_transfer_txn(
             "updated_at": now,
         })
 
-        # Complete associated matches and listings
-        for mid in (tx_data.get("match_ids") or []):
-            m_ref = db.collection("matches").document(mid)
-            m_snap = await m_ref.get(transaction=transaction)
-            if m_snap.exists:
-                m_data = m_snap.to_dict()
-                transaction.update(m_ref, {
-                    "status": MatchStatus.ACCEPTED.value,
-                    "updated_at": now,
-                })
-                l_ref = db.collection("listings").document(m_data["listing_id"])
-                transaction.update(l_ref, {
-                    "status": SwapRequestStatus.COMPLETED.value,
-                    "updated_at": now,
-                })
+        for m_ref, l_ref in match_listing_pairs:
+            transaction.update(m_ref, {
+                "status": MatchStatus.ACCEPTED.value,
+                "updated_at": now,
+            })
+            transaction.update(l_ref, {
+                "status": SwapRequestStatus.COMPLETED.value,
+                "updated_at": now,
+            })
 
     # Mark transaction completed
     transaction.update(tx_ref, {
@@ -277,30 +282,32 @@ async def _cancel_transaction_txn(
 
     now = datetime.now(timezone.utc)
 
-    # Cancel the transaction
-    transaction.update(tx_ref, {
-        "status": TransactionStatus.CANCELLED.value,
-        "updated_at": now,
-    })
-
-    # Cancel associated match and reopen listing
+    # --- All reads first ---
+    match_ref = None
+    listing_ref = None
     if tx_data.get("match_id"):
         match_ref = db.collection("matches").document(tx_data["match_id"])
         match_snap = await match_ref.get(transaction=transaction)
         if match_snap.exists:
             match_d = match_snap.to_dict()
-            transaction.update(match_ref, {
-                "status": MatchStatus.CANCELLED.value,
+            listing_ref = db.collection("listings").document(match_d["listing_id"])
+
+    # --- All writes after reads ---
+    transaction.update(tx_ref, {
+        "status": TransactionStatus.CANCELLED.value,
+        "updated_at": now,
+    })
+
+    if match_ref and match_snap.exists:
+        transaction.update(match_ref, {
+            "status": MatchStatus.CANCELLED.value,
+            "updated_at": now,
+        })
+        if listing_ref:
+            transaction.update(listing_ref, {
+                "status": "OPEN",
                 "updated_at": now,
             })
-            # Reopen listing
-            listing_ref = db.collection("listings").document(match_d["listing_id"])
-            listing_snap = await listing_ref.get(transaction=transaction)
-            if listing_snap.exists:
-                transaction.update(listing_ref, {
-                    "status": "OPEN",
-                    "updated_at": now,
-                })
 
     tx_data["status"] = TransactionStatus.CANCELLED.value
     return _to_transaction_response(tx_snap.id, tx_data)
