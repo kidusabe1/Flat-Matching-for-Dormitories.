@@ -12,12 +12,14 @@ import CompatibleSwapsPage from "./pages/CompatibleSwapsPage";
 import MatchesPage from "./pages/MatchesPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import ProfilePage from "./pages/ProfilePage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route
           element={

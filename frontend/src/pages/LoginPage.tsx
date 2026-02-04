@@ -1,24 +1,42 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "../firebase";
 import { useAuth } from "../hooks/useAuth";
+
+type Mode = "signIn" | "signUp" | "forgotPassword";
 
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<Mode>("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError("");
+    setSuccess("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
     try {
-      if (isSignUp) {
+      if (mode === "forgotPassword") {
+        await sendPasswordResetEmail(auth, email, {
+          url: window.location.origin + "/login",
+          handleCodeInApp: false,
+        });
+        setSuccess("Password reset link sent! Check your email.");
+      } else if (mode === "signUp") {
         await signUp(email, password);
-        navigate("/onboarding");
+        navigate("/verify-email");
       } else {
         await signIn(email, password);
         navigate("/");
@@ -31,6 +49,13 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const title =
+    mode === "forgotPassword"
+      ? "Reset Password"
+      : mode === "signUp"
+      ? "Create Account"
+      : "Sign In";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
@@ -46,13 +71,17 @@ export default function LoginPage() {
           onSubmit={handleSubmit}
           className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
         >
-          <h2 className="mb-6 text-lg font-semibold text-gray-900">
-            {isSignUp ? "Create Account" : "Sign In"}
-          </h2>
+          <h2 className="mb-6 text-lg font-semibold text-gray-900">{title}</h2>
 
           {error && (
             <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+              {success}
             </div>
           )}
 
@@ -74,25 +103,40 @@ export default function LoginPage() {
                 placeholder="you@biu.ac.il"
               />
             </div>
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                placeholder="At least 6 characters"
-              />
-            </div>
+
+            {mode !== "forgotPassword" && (
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  placeholder="At least 6 characters"
+                />
+              </div>
+            )}
           </div>
+
+          {mode === "signIn" && (
+            <div className="mt-2 text-right">
+              <button
+                type="button"
+                onClick={() => switchMode("forgotPassword")}
+                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
           <button
             type="submit"
@@ -101,23 +145,48 @@ export default function LoginPage() {
           >
             {loading
               ? "Please wait..."
-              : isSignUp
+              : mode === "forgotPassword"
+              ? "Send Reset Link"
+              : mode === "signUp"
               ? "Create Account"
               : "Sign In"}
           </button>
 
           <p className="mt-4 text-center text-sm text-gray-500">
-            {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError("");
-              }}
-              className="font-medium text-blue-600 hover:text-blue-700"
-            >
-              {isSignUp ? "Sign In" : "Sign Up"}
-            </button>
+            {mode === "forgotPassword" ? (
+              <>
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signIn")}
+                  className="font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Sign In
+                </button>
+              </>
+            ) : mode === "signUp" ? (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signIn")}
+                  className="font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Sign In
+                </button>
+              </>
+            ) : (
+              <>
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signUp")}
+                  className="font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
           </p>
         </form>
       </div>

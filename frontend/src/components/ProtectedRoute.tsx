@@ -7,7 +7,7 @@ export default function ProtectedRoute({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, hasProfile } = useAuth();
+  const { user, loading, emailVerified, hasProfile } = useAuth();
 
   if (loading) {
     return <LoadingSpinner />;
@@ -15,6 +15,10 @@ export default function ProtectedRoute({
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (emailVerified === false) {
+    return <Navigate to="/verify-email" replace />;
   }
 
   if (hasProfile === false) {
