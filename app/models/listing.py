@@ -9,6 +9,7 @@ class LeaseTransferCreate(BaseModel):
     room_id: str
     lease_start_date: date
     lease_end_date: date
+    move_in_date: date | None = None
     description: str = ""
     asking_price: int | None = None
 
@@ -17,6 +18,7 @@ class SwapRequestCreate(BaseModel):
     room_id: str
     lease_start_date: date
     lease_end_date: date
+    move_in_date: date | None = None
     description: str = ""
     desired_categories: list[RoomCategory]
     desired_buildings: list[str] | None = None
@@ -29,6 +31,7 @@ class ListingUpdate(BaseModel):
     asking_price: int | None = None
     lease_start_date: date | None = None
     lease_end_date: date | None = None
+    move_in_date: date | None = None
     desired_categories: list[RoomCategory] | None = None
     desired_buildings: list[str] | None = None
 
@@ -48,6 +51,7 @@ class ListingResponse(BaseModel):
     room_building: str
     lease_start_date: date
     lease_end_date: date
+    move_in_date: date | None = None
     description: str
     asking_price: int | None = None
     desired_categories: list[str] | None = None

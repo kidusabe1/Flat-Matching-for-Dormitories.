@@ -3,6 +3,11 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class ContactResponse(BaseModel):
+    name: str
+    phone: str
+
+
 class MatchResponse(BaseModel):
     id: str
     match_type: str

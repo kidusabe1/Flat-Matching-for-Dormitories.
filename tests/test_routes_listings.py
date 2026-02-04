@@ -22,7 +22,7 @@ class TestCreateLeaseTransfer:
         data = resp.json()
         assert data["listing_type"] == "LEASE_TRANSFER"
         assert data["status"] == "OPEN"
-        assert data["room_category"] == "A"
+        assert data["room_category"] == "PARK_SHARED_2BR"
 
     @pytest.mark.asyncio
     async def test_invalid_dates_rejected(self, client, mock_db):
@@ -69,7 +69,7 @@ class TestCreateLeaseTransfer:
 class TestCreateSwapRequest:
     @pytest.mark.asyncio
     async def test_create_swap_request(self, client, mock_db):
-        mock_db.register_doc("rooms", "room-1", make_room_data(category="A"))
+        mock_db.register_doc("rooms", "room-1", make_room_data(category="PARK_SHARED_2BR"))
         mock_db.register_collection_docs("listings", [])
 
         resp = await client.post("/api/v1/listings/swap-request", json={
@@ -77,13 +77,13 @@ class TestCreateSwapRequest:
             "lease_start_date": "2026-03-01",
             "lease_end_date": "2026-08-31",
             "description": "Want to swap to category B",
-            "desired_categories": ["B"],
+            "desired_categories": ["ILANOT_STUDIO"],
         })
         assert resp.status_code == 201
         data = resp.json()
         assert data["listing_type"] == "SWAP_REQUEST"
         assert data["status"] == "OPEN"
-        assert data["desired_categories"] == ["B"]
+        assert data["desired_categories"] == ["ILANOT_STUDIO"]
 
     @pytest.mark.asyncio
     async def test_swap_no_desired_categories(self, client, mock_db):

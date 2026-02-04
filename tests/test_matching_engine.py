@@ -90,8 +90,8 @@ class TestFindCompatibleSwaps:
         source = make_listing_data(
             listing_type="SWAP_REQUEST",
             owner_uid="user-a",
-            room_category="A",
-            desired_categories=["B"],
+            room_category="PARK_SHARED_2BR",
+            desired_categories=["ILANOT_STUDIO"],
         )
         mock_db.register_doc("listings", "listing-source", source)
 
@@ -100,9 +100,9 @@ class TestFindCompatibleSwaps:
             listing_type="SWAP_REQUEST",
             status="OPEN",
             owner_uid="user-b",
-            room_category="B",
+            room_category="ILANOT_STUDIO",
             room_building="Building 3",
-            desired_categories=["A"],
+            desired_categories=["PARK_SHARED_2BR"],
         )
         candidate_snap = _make_doc_snapshot("listing-candidate", candidate)
         mock_db.register_collection_docs("listings", [candidate_snap])
@@ -117,8 +117,8 @@ class TestFindCompatibleSwaps:
         source = make_listing_data(
             listing_type="SWAP_REQUEST",
             owner_uid="user-a",
-            room_category="A",
-            desired_categories=["B"],
+            room_category="PARK_SHARED_2BR",
+            desired_categories=["ILANOT_STUDIO"],
         )
         mock_db.register_doc("listings", "listing-source", source)
 
@@ -127,8 +127,8 @@ class TestFindCompatibleSwaps:
             listing_type="SWAP_REQUEST",
             status="OPEN",
             owner_uid="user-a",
-            room_category="B",
-            desired_categories=["A"],
+            room_category="ILANOT_STUDIO",
+            desired_categories=["PARK_SHARED_2BR"],
         )
         candidate_snap = _make_doc_snapshot("listing-other", candidate)
         mock_db.register_collection_docs("listings", [candidate_snap])
@@ -142,8 +142,8 @@ class TestFindCompatibleSwaps:
         source = make_listing_data(
             listing_type="SWAP_REQUEST",
             owner_uid="user-a",
-            room_category="A",
-            desired_categories=["B"],
+            room_category="PARK_SHARED_2BR",
+            desired_categories=["ILANOT_STUDIO"],
         )
         mock_db.register_doc("listings", "listing-source", source)
 
@@ -152,8 +152,8 @@ class TestFindCompatibleSwaps:
             listing_type="SWAP_REQUEST",
             status="OPEN",
             owner_uid="user-b",
-            room_category="B",
-            desired_categories=["C"],
+            room_category="ILANOT_STUDIO",
+            desired_categories=["PARK_STUDIO"],
         )
         candidate_snap = _make_doc_snapshot("listing-candidate", candidate)
         mock_db.register_collection_docs("listings", [candidate_snap])
@@ -167,8 +167,8 @@ class TestFindCompatibleSwaps:
         source = make_listing_data(
             listing_type="SWAP_REQUEST",
             owner_uid="user-a",
-            room_category="A",
-            desired_categories=["B"],
+            room_category="PARK_SHARED_2BR",
+            desired_categories=["ILANOT_STUDIO"],
             lease_start_date=datetime(2026, 3, 1, tzinfo=timezone.utc),
             lease_end_date=datetime(2026, 5, 31, tzinfo=timezone.utc),
         )
@@ -179,8 +179,8 @@ class TestFindCompatibleSwaps:
             listing_type="SWAP_REQUEST",
             status="OPEN",
             owner_uid="user-b",
-            room_category="B",
-            desired_categories=["A"],
+            room_category="ILANOT_STUDIO",
+            desired_categories=["PARK_SHARED_2BR"],
             lease_start_date=datetime(2026, 9, 1, tzinfo=timezone.utc),
             lease_end_date=datetime(2026, 12, 31, tzinfo=timezone.utc),
         )
@@ -196,9 +196,9 @@ class TestFindCompatibleSwaps:
         source = make_listing_data(
             listing_type="SWAP_REQUEST",
             owner_uid="user-a",
-            room_category="A",
+            room_category="PARK_SHARED_2BR",
             room_building="Building 3",
-            desired_categories=["B"],
+            desired_categories=["ILANOT_STUDIO"],
             desired_buildings=["Building 5"],
         )
         mock_db.register_doc("listings", "listing-source", source)
@@ -208,9 +208,9 @@ class TestFindCompatibleSwaps:
             listing_type="SWAP_REQUEST",
             status="OPEN",
             owner_uid="user-b",
-            room_category="B",
+            room_category="ILANOT_STUDIO",
             room_building="Building 3",
-            desired_categories=["A"],
+            desired_categories=["PARK_SHARED_2BR"],
         )
         candidate_snap = _make_doc_snapshot("listing-candidate", candidate)
         mock_db.register_collection_docs("listings", [candidate_snap])
@@ -230,7 +230,7 @@ class TestFindCompatibleSwaps:
         source = make_listing_data(
             listing_type="SWAP_REQUEST",
             owner_uid="user-a",
-            room_category="A",
+            room_category="PARK_SHARED_2BR",
             desired_categories=[],
         )
         mock_db.register_doc("listings", "listing-source", source)

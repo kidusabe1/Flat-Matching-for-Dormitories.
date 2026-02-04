@@ -13,7 +13,7 @@ from app.models.enums import (
     MatchStatus,
     TransactionStatus,
 )
-from app.models.match import MatchResponse
+from app.models.match import ContactResponse, MatchResponse
 from app.state_machine.transitions import assert_transition
 
 
@@ -212,3 +212,44 @@ async def _reject_match_txn(
     match_data["status"] = MatchStatus.REJECTED.value
     match_data["responded_at"] = now
     return _to_match_response(match_snap.id, match_data)
+
+
+async def get_match_contact(
+    db: AsyncClient, match_id: str, requester_uid: str
+) -> ContactResponse:
+    """Return counterparty contact info for an accepted match."""
+    match_doc = await db.collection("matches").document(match_id).get()
+    if not match_doc.exists:
+        raise NotFoundError(f"Match {match_id} not found")
+
+    match_data = match_doc.to_dict()
+
+    if match_data["status"] != MatchStatus.ACCEPTED.value:
+        raise ConflictError("Contact info is only available for accepted matches")
+
+    # Determine the counterparty UID
+    listing_doc = await db.collection("listings").document(match_data["listing_id"]).get()
+    if not listing_doc.exists:
+        raise NotFoundError("Associated listing not found")
+
+    listing = listing_doc.to_dict()
+    listing_owner_uid = listing["owner_uid"]
+    claimant_uid = match_data["claimant_uid"]
+
+    if requester_uid == listing_owner_uid:
+        counterparty_uid = claimant_uid
+    elif requester_uid == claimant_uid:
+        counterparty_uid = listing_owner_uid
+    else:
+        raise ForbiddenError("You are not a party in this match")
+
+    # Fetch counterparty's profile
+    user_doc = await db.collection("users").document(counterparty_uid).get()
+    if not user_doc.exists:
+        raise NotFoundError("Counterparty profile not found")
+
+    user_data = user_doc.to_dict()
+    return ContactResponse(
+        name=user_data["full_name"],
+        phone=user_data.get("phone", ""),
+    )

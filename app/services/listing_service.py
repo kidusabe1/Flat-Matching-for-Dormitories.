@@ -38,6 +38,7 @@ def _to_listing_response(doc_id: str, data: dict) -> ListingResponse:
         asking_price=data.get("asking_price"),
         desired_categories=data.get("desired_categories"),
         desired_buildings=data.get("desired_buildings"),
+        move_in_date=_to_date(data.get("move_in_date")),
         desired_min_start=_to_date(data.get("desired_min_start")),
         desired_max_end=_to_date(data.get("desired_max_end")),
         replacement_match_id=data.get("replacement_match_id"),
@@ -89,6 +90,11 @@ async def create_lease_transfer(
         "room_building": room["building"],
         "lease_start_date": datetime.combine(data.lease_start_date, datetime.min.time(), tzinfo=timezone.utc),
         "lease_end_date": datetime.combine(data.lease_end_date, datetime.min.time(), tzinfo=timezone.utc),
+        "move_in_date": (
+            datetime.combine(data.move_in_date, datetime.min.time(), tzinfo=timezone.utc)
+            if data.move_in_date
+            else None
+        ),
         "description": data.description,
         "asking_price": data.asking_price,
         "expires_at": now + timedelta(days=settings.listing_expiry_days),
@@ -174,7 +180,7 @@ async def update_listing(
     updates = {}
     for k, v in data.model_dump().items():
         if v is not None:
-            if k in ("lease_start_date", "lease_end_date"):
+            if k in ("lease_start_date", "lease_end_date", "move_in_date"):
                 updates[k] = datetime.combine(v, datetime.min.time(), tzinfo=timezone.utc)
             else:
                 updates[k] = v
@@ -323,6 +329,11 @@ async def create_swap_request(
         "room_building": room["building"],
         "lease_start_date": datetime.combine(data.lease_start_date, datetime.min.time(), tzinfo=timezone.utc),
         "lease_end_date": datetime.combine(data.lease_end_date, datetime.min.time(), tzinfo=timezone.utc),
+        "move_in_date": (
+            datetime.combine(data.move_in_date, datetime.min.time(), tzinfo=timezone.utc)
+            if data.move_in_date
+            else None
+        ),
         "description": data.description,
         "asking_price": None,
         "desired_categories": [c.value for c in data.desired_categories],

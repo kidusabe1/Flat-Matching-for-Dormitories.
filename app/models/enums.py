@@ -2,9 +2,18 @@ from enum import Enum
 
 
 class RoomCategory(str, Enum):
-    A = "A"
-    B = "B"
-    C = "C"
+    # Park 100 Complex (New Dorms)
+    PARK_SHARED_2BR = "PARK_SHARED_2BR"
+    PARK_SHARED_3BR = "PARK_SHARED_3BR"
+    PARK_STUDIO = "PARK_STUDIO"
+    PARK_COUPLES = "PARK_COUPLES"
+    # Ilanot Complex (Standard Dorms)
+    ILANOT_SHARED_1BR = "ILANOT_SHARED_1BR"
+    ILANOT_SHARED_2BR = "ILANOT_SHARED_2BR"
+    ILANOT_PRIVATE = "ILANOT_PRIVATE"
+    ILANOT_SHARED_LARGE = "ILANOT_SHARED_LARGE"
+    ILANOT_STUDIO = "ILANOT_STUDIO"
+    ILANOT_COUPLES = "ILANOT_COUPLES"
 
 
 class ListingType(str, Enum):

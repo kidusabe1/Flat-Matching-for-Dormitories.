@@ -152,7 +152,7 @@ async def client(app):
 
 
 def make_room_data(
-    category="A",
+    category="PARK_SHARED_2BR",
     building="Building 3",
     floor=2,
     room_number="204",
@@ -177,7 +177,7 @@ def make_listing_data(
     status="OPEN",
     owner_uid="test-uid-123",
     room_id="room-1",
-    room_category="A",
+    room_category="PARK_SHARED_2BR",
     room_building="Building 3",
     version=1,
     **kwargs,
@@ -195,6 +195,7 @@ def make_listing_data(
         "lease_end_date": datetime(2026, 8, 31, tzinfo=timezone.utc),
         "description": "Test listing",
         "asking_price": None,
+        "move_in_date": None,
         "desired_categories": None,
         "desired_buildings": None,
         "desired_min_start": None,
@@ -224,7 +225,7 @@ def make_match_data(
         "claimant_uid": claimant_uid,
         "claimant_listing_id": None,
         "offered_room_id": "room-1",
-        "offered_room_category": "A",
+        "offered_room_category": "PARK_SHARED_2BR",
         "offered_room_building": "Building 3",
         "proposed_at": now,
         "responded_at": None,
