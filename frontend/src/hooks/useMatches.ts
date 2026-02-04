@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import client from "../api/client";
-import type { MatchResponse } from "../types";
+import type { MatchResponse, ContactResponse } from "../types";
 
 export function useMyMatches(status?: string) {
   return useQuery<MatchResponse[]>({
@@ -38,6 +38,17 @@ export function useAcceptMatch() {
       queryClient.invalidateQueries({ queryKey: ["myListings"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
+  });
+}
+
+export function useMatchContact(matchId: string | undefined, enabled: boolean) {
+  return useQuery<ContactResponse>({
+    queryKey: ["matchContact", matchId],
+    queryFn: async () => {
+      const { data } = await client.get(`/api/v1/matches/${matchId}/contact`);
+      return data;
+    },
+    enabled: !!matchId && enabled,
   });
 }
 

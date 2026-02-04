@@ -4,7 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useCreateProfile } from "../hooks/useProfile";
 
 export default function OnboardingPage() {
-  const { user } = useAuth();
+  const { user, setHasProfile } = useAuth();
   const navigate = useNavigate();
   const createProfile = useCreateProfile();
   const [fullName, setFullName] = useState("");
@@ -21,6 +21,7 @@ export default function OnboardingPage() {
         student_id: studentId,
         phone,
       });
+      setHasProfile(true);
       navigate("/");
     } catch (err: unknown) {
       const message =

@@ -209,6 +209,11 @@ export interface ClaimRequest {
   claimant_listing_id?: string;
 }
 
+export interface ContactResponse {
+  name: string;
+  phone: string;
+}
+
 export interface MatchResponse {
   id: string;
   match_type: ListingType;
