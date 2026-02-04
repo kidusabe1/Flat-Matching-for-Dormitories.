@@ -136,7 +136,7 @@ async def _confirm_lease_transfer_txn(
             raise NotFoundError("Room not found")
 
         room = room_snap.to_dict()
-        if room["occupant_uid"] != tx_data["from_uid"]:
+        if room.get("occupant_uid") and room["occupant_uid"] != tx_data["from_uid"]:
             raise ConflictError("Room occupant has changed — cannot complete transfer")
 
         match_ref = db.collection("matches").document(tx_data["match_id"])
@@ -189,9 +189,9 @@ async def _confirm_lease_transfer_txn(
         room_a = room_a_snap.to_dict()
         room_b = room_b_snap.to_dict()
 
-        if room_a["occupant_uid"] != tx_data["party_a_uid"]:
+        if room_a.get("occupant_uid") and room_a["occupant_uid"] != tx_data["party_a_uid"]:
             raise ConflictError("Room A occupant has changed")
-        if room_b["occupant_uid"] != tx_data["party_b_uid"]:
+        if room_b.get("occupant_uid") and room_b["occupant_uid"] != tx_data["party_b_uid"]:
             raise ConflictError("Room B occupant has changed")
 
         # Read all matches and their listings before any writes

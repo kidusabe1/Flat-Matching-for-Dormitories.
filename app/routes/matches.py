@@ -3,7 +3,7 @@ from google.cloud.firestore_v1 import AsyncClient
 
 from app.auth.dependencies import get_current_user
 from app.auth.models import FirebaseUser
-from app.models.match import MatchResponse
+from app.models.match import ContactResponse, MatchResponse
 from app.services import match_service
 from app.services.firestore_client import get_db
 
@@ -44,3 +44,12 @@ async def reject_match(
     db: AsyncClient = Depends(get_db),
 ):
     return await match_service.reject_match(db, match_id, user.uid)
+
+
+@router.get("/{match_id}/contact", response_model=ContactResponse)
+async def get_match_contact(
+    match_id: str,
+    user: FirebaseUser = Depends(get_current_user),
+    db: AsyncClient = Depends(get_db),
+):
+    return await match_service.get_match_contact(db, match_id, user.uid)
