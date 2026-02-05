@@ -76,13 +76,13 @@ jobs:
 
       - name: Deploy backend to Cloud Run
         run: |
+          echo 'SMTP_PASSWORD: "${{ secrets.SMTP_PASSWORD }}"' >> env.production.yaml
           gcloud run deploy biu-dorm-exchange \
             --source . \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
-            --env-vars-file env.production.yaml \
-            --set-env-vars "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}"
+            --env-vars-file env.production.yaml
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
