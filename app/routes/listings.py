@@ -12,7 +12,7 @@ from app.models.listing import (
     SwapRequestCreate,
 )
 from app.models.match import MatchResponse
-from app.services import listing_service, matching_engine
+from app.services import listing_service, match_service, matching_engine
 from app.services.firestore_client import get_db
 
 router = APIRouter(prefix="/api/v1/listings", tags=["listings"])
@@ -111,6 +111,15 @@ async def claim_listing(
             db, listing_id, user.uid, data.message
         )
     return result
+
+
+@router.get("/{listing_id}/bids", response_model=list[MatchResponse])
+async def get_listing_bids(
+    listing_id: str,
+    user: FirebaseUser = Depends(get_current_user),
+    db: AsyncClient = Depends(get_db),
+):
+    return await match_service.get_listing_bids(db, listing_id, user.uid)
 
 
 @router.get("/{listing_id}/compatible", response_model=list[ListingResponse])

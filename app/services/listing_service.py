@@ -276,8 +276,17 @@ async def _claim_listing_txn(
     settings = get_settings()
     now = datetime.now(timezone.utc)
 
-    # Create match document
-    match_ref = db.collection("matches").document()
+    # Duplicate bid check: use deterministic doc ID
+    bid_id = f"{listing_id}_{claimant_uid}"
+    existing_bid_ref = db.collection("matches").document(bid_id)
+    existing_bid_snap = await existing_bid_ref.get(transaction=transaction)
+    if existing_bid_snap.exists:
+        existing = existing_bid_snap.to_dict()
+        if existing.get("status") == MatchStatus.PROPOSED.value:
+            raise ConflictError("You have already bid on this listing")
+
+    # Create match document (bid) — listing stays OPEN
+    match_ref = db.collection("matches").document(bid_id)
     match_data = {
         "match_type": ListingType.LEASE_TRANSFER.value,
         "status": MatchStatus.PROPOSED.value,
@@ -287,6 +296,7 @@ async def _claim_listing_txn(
         "offered_room_id": listing["room_id"],
         "offered_room_category": listing["room_category"],
         "offered_room_building": listing["room_building"],
+        "paired_match_id": None,
         "proposed_at": now,
         "responded_at": None,
         "expires_at": now + timedelta(hours=settings.match_expiry_hours),
@@ -295,13 +305,6 @@ async def _claim_listing_txn(
         "updated_at": now,
     }
     transaction.create(match_ref, match_data)
-
-    # Update listing status to MATCHED
-    transaction.update(listing_ref, {
-        "status": LeaseTransferStatus.MATCHED.value,
-        "version": listing["version"] + 1,
-        "updated_at": now,
-    })
 
     match_data["id"] = match_ref.id
     return match_data
@@ -443,8 +446,19 @@ async def _claim_swap_txn(
     if not (i_want_theirs and they_want_mine):
         raise BadRequestError("Listings are not compatible for a swap")
 
+    # Duplicate swap bid check
+    swap_bid_id = f"{listing_id}_{claimant_listing_id}"
+    existing_bid_ref = db.collection("matches").document(swap_bid_id)
+    existing_bid_snap = await existing_bid_ref.get(transaction=transaction)
+    if existing_bid_snap.exists:
+        existing = existing_bid_snap.to_dict()
+        if existing.get("status") == MatchStatus.PROPOSED.value:
+            raise ConflictError("You have already bid on this listing")
+
+    swap_bid_id_2 = f"{claimant_listing_id}_{listing_id}"
+
     # Create match: claimant takes listing's room (replacement for listing owner)
-    match1_ref = db.collection("matches").document()
+    match1_ref = db.collection("matches").document(swap_bid_id)
     match1_data = {
         "match_type": "SWAP_LEG",
         "status": MatchStatus.PROPOSED.value,
@@ -454,6 +468,7 @@ async def _claim_swap_txn(
         "offered_room_id": listing["room_id"],
         "offered_room_category": listing["room_category"],
         "offered_room_building": listing["room_building"],
+        "paired_match_id": swap_bid_id_2,
         "proposed_at": now,
         "responded_at": None,
         "expires_at": now + timedelta(hours=settings.match_expiry_hours),
@@ -464,7 +479,7 @@ async def _claim_swap_txn(
     transaction.create(match1_ref, match1_data)
 
     # Create match: listing owner takes claimant's room (replacement for claimant)
-    match2_ref = db.collection("matches").document()
+    match2_ref = db.collection("matches").document(swap_bid_id_2)
     match2_data = {
         "match_type": "SWAP_LEG",
         "status": MatchStatus.PROPOSED.value,
@@ -474,6 +489,7 @@ async def _claim_swap_txn(
         "offered_room_id": claimant_listing["room_id"],
         "offered_room_category": claimant_listing["room_category"],
         "offered_room_building": claimant_listing["room_building"],
+        "paired_match_id": swap_bid_id,
         "proposed_at": now,
         "responded_at": None,
         "expires_at": now + timedelta(hours=settings.match_expiry_hours),
@@ -483,30 +499,10 @@ async def _claim_swap_txn(
     }
     transaction.create(match2_ref, match2_data)
 
-    # Update both listings to FULLY_MATCHED (direct swap)
-    new_listing_status = SwapRequestStatus.FULLY_MATCHED.value
-    assert_transition(listing["listing_type"], listing["status"], new_listing_status)
-    transaction.update(listing_ref, {
-        "status": new_listing_status,
-        "replacement_match_id": match1_ref.id,
-        "target_match_id": match2_ref.id,
-        "version": listing["version"] + 1,
-        "updated_at": now,
-    })
-
-    new_claimant_status = SwapRequestStatus.FULLY_MATCHED.value
-    assert_transition(claimant_listing["listing_type"], claimant_listing["status"], new_claimant_status)
-    transaction.update(claimant_listing_ref, {
-        "status": new_claimant_status,
-        "replacement_match_id": match2_ref.id,
-        "target_match_id": match1_ref.id,
-        "version": claimant_listing["version"] + 1,
-        "updated_at": now,
-    })
-
+    # Listings stay at their current status (OPEN/PARTIAL_MATCH) — bidding model
     return {
         "match_1": {**match1_data, "id": match1_ref.id},
         "match_2": {**match2_data, "id": match2_ref.id},
-        "listing_status": new_listing_status,
-        "claimant_listing_status": new_claimant_status,
+        "listing_status": listing["status"],
+        "claimant_listing_status": claimant_listing["status"],
     }

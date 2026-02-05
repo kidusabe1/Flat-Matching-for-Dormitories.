@@ -224,6 +224,7 @@ export interface MatchResponse {
   offered_room_id: string;
   offered_room_category: RoomCategory;
   offered_room_building: string;
+  paired_match_id?: string;
   proposed_at?: string;
   responded_at?: string;
   expires_at?: string;

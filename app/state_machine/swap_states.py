@@ -4,6 +4,7 @@ SWAP_REQUEST_TRANSITIONS: dict[SwapRequestStatus, set[SwapRequestStatus]] = {
     SwapRequestStatus.OPEN: {
         SwapRequestStatus.PARTIAL_MATCH,
         SwapRequestStatus.FULLY_MATCHED,  # direct swap: both sides at once
+        SwapRequestStatus.PENDING_APPROVAL,  # bidding: accept a bid directly
         SwapRequestStatus.CANCELLED,
         SwapRequestStatus.EXPIRED,
     },

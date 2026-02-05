@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import client from "../api/client";
 import type {
   ListingResponse,
+  MatchResponse,
   PaginatedListings,
   LeaseTransferCreate,
   SwapRequestCreate,
@@ -125,6 +126,19 @@ export function useCancelListing() {
       queryClient.invalidateQueries({ queryKey: ["listings"] });
       queryClient.invalidateQueries({ queryKey: ["myListings"] });
     },
+  });
+}
+
+export function useListingBids(listingId: string | undefined) {
+  return useQuery<MatchResponse[]>({
+    queryKey: ["listings", listingId, "bids"],
+    queryFn: async () => {
+      const { data } = await client.get(
+        `/api/v1/listings/${listingId}/bids`
+      );
+      return data;
+    },
+    enabled: !!listingId,
   });
 }
 

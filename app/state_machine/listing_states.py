@@ -3,6 +3,7 @@ from app.models.enums import LeaseTransferStatus
 LEASE_TRANSFER_TRANSITIONS: dict[LeaseTransferStatus, set[LeaseTransferStatus]] = {
     LeaseTransferStatus.OPEN: {
         LeaseTransferStatus.MATCHED,
+        LeaseTransferStatus.PENDING_APPROVAL,  # bidding: accept a bid directly
         LeaseTransferStatus.CANCELLED,
         LeaseTransferStatus.EXPIRED,
     },

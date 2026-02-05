@@ -28,6 +28,7 @@ def _to_match_response(doc_id: str, data: dict) -> MatchResponse:
         offered_room_id=data["offered_room_id"],
         offered_room_category=data["offered_room_category"],
         offered_room_building=data["offered_room_building"],
+        paired_match_id=data.get("paired_match_id"),
         proposed_at=data.get("proposed_at"),
         responded_at=data.get("responded_at"),
         expires_at=data.get("expires_at"),
@@ -58,7 +59,7 @@ async def get_user_matches(
     listing_query = (
         db.collection("listings")
         .where("owner_uid", "==", uid)
-        .where("status", "in", ["MATCHED", "PENDING_APPROVAL", "FULLY_MATCHED"])
+        .where("status", "in", ["OPEN", "MATCHED", "PENDING_APPROVAL", "FULLY_MATCHED"])
     )
     listing_ids = []
     async for doc in listing_query.stream():
@@ -74,6 +75,28 @@ async def get_user_matches(
                 results.append(match_resp)
 
     return results
+
+
+async def get_listing_bids(
+    db: AsyncClient, listing_id: str, owner_uid: str
+) -> list[MatchResponse]:
+    """Return all PROPOSED matches (bids) for a listing. Owner only."""
+    listing_doc = await db.collection("listings").document(listing_id).get()
+    if not listing_doc.exists:
+        raise NotFoundError(f"Listing {listing_id} not found")
+    listing = listing_doc.to_dict()
+    if listing["owner_uid"] != owner_uid:
+        raise ForbiddenError("Only the listing owner can view bids")
+
+    bids = []
+    query = (
+        db.collection("matches")
+        .where("listing_id", "==", listing_id)
+        .where("status", "==", MatchStatus.PROPOSED.value)
+    )
+    async for doc in query.stream():
+        bids.append(_to_match_response(doc.id, doc.to_dict()))
+    return bids
 
 
 async def accept_match(
@@ -120,7 +143,7 @@ async def _accept_match_txn(
         "version": match_data["version"] + 1,
     })
 
-    # Transition listing to PENDING_APPROVAL
+    # Transition listing to PENDING_APPROVAL (works from OPEN or MATCHED)
     assert_transition(listing["listing_type"], listing["status"], "PENDING_APPROVAL")
     transaction.update(listing_ref, {
         "status": "PENDING_APPROVAL",
@@ -128,29 +151,112 @@ async def _accept_match_txn(
         "version": listing["version"] + 1,
     })
 
+    # Cancel all other PROPOSED bids for this listing
+    other_bids_query = (
+        db.collection("matches")
+        .where("listing_id", "==", match_data["listing_id"])
+        .where("status", "==", MatchStatus.PROPOSED.value)
+    )
+    async for bid_doc in other_bids_query.stream():
+        if bid_doc.id != match_id:
+            transaction.update(
+                db.collection("matches").document(bid_doc.id),
+                {"status": MatchStatus.CANCELLED.value, "updated_at": now},
+            )
+
+    # Handle swap legs: accept paired match and transition paired listing
+    paired_match_id = match_data.get("paired_match_id")
+    if paired_match_id:
+        paired_ref = db.collection("matches").document(paired_match_id)
+        paired_snap = await paired_ref.get(transaction=transaction)
+        if paired_snap.exists:
+            paired_data = paired_snap.to_dict()
+            transaction.update(paired_ref, {
+                "status": MatchStatus.ACCEPTED.value,
+                "responded_at": now,
+                "updated_at": now,
+                "version": paired_data.get("version", 1) + 1,
+            })
+            # Transition the paired listing to PENDING_APPROVAL
+            paired_listing_ref = db.collection("listings").document(paired_data["listing_id"])
+            paired_listing_snap = await paired_listing_ref.get(transaction=transaction)
+            if paired_listing_snap.exists:
+                paired_listing = paired_listing_snap.to_dict()
+                assert_transition(paired_listing["listing_type"], paired_listing["status"], "PENDING_APPROVAL")
+                transaction.update(paired_listing_ref, {
+                    "status": "PENDING_APPROVAL",
+                    "replacement_match_id": paired_match_id,
+                    "target_match_id": match_id,
+                    "updated_at": now,
+                    "version": paired_listing["version"] + 1,
+                })
+                # Cancel other bids on the paired listing
+                paired_bids_query = (
+                    db.collection("matches")
+                    .where("listing_id", "==", paired_data["listing_id"])
+                    .where("status", "==", MatchStatus.PROPOSED.value)
+                )
+                async for bid_doc in paired_bids_query.stream():
+                    if bid_doc.id != paired_match_id:
+                        transaction.update(
+                            db.collection("matches").document(bid_doc.id),
+                            {"status": MatchStatus.CANCELLED.value, "updated_at": now},
+                        )
+
+        # Set match IDs on the primary listing too
+        transaction.update(listing_ref, {
+            "replacement_match_id": match_id,
+            "target_match_id": paired_match_id,
+        })
+
     # Create a transaction record
     tx_ref = db.collection("transactions").document()
-    tx_data = {
-        "transaction_type": listing["listing_type"],
-        "status": TransactionStatus.PENDING.value,
-        "match_id": match_id,
-        "from_uid": listing["owner_uid"],
-        "to_uid": match_data["claimant_uid"],
-        "room_id": listing["room_id"],
-        "match_ids": None,
-        "party_a_uid": None,
-        "party_a_room_id": None,
-        "party_b_uid": None,
-        "party_b_room_id": None,
-        "lease_start_date": listing["lease_start_date"],
-        "lease_end_date": listing["lease_end_date"],
-        "initiated_at": now,
-        "completed_at": None,
-        "failed_at": None,
-        "failure_reason": None,
-        "created_at": now,
-        "updated_at": now,
-    }
+    if paired_match_id:
+        # Swap transaction
+        tx_data = {
+            "transaction_type": "SWAP",
+            "status": TransactionStatus.PENDING.value,
+            "match_id": None,
+            "match_ids": [match_id, paired_match_id],
+            "from_uid": None,
+            "to_uid": None,
+            "room_id": None,
+            "party_a_uid": listing["owner_uid"],
+            "party_a_room_id": listing["room_id"],
+            "party_b_uid": match_data["claimant_uid"],
+            "party_b_room_id": match_data.get("offered_room_id") if match_data.get("claimant_listing_id") else None,
+            "lease_start_date": listing["lease_start_date"],
+            "lease_end_date": listing["lease_end_date"],
+            "initiated_at": now,
+            "completed_at": None,
+            "failed_at": None,
+            "failure_reason": None,
+            "created_at": now,
+            "updated_at": now,
+        }
+    else:
+        # Lease transfer transaction
+        tx_data = {
+            "transaction_type": listing["listing_type"],
+            "status": TransactionStatus.PENDING.value,
+            "match_id": match_id,
+            "from_uid": listing["owner_uid"],
+            "to_uid": match_data["claimant_uid"],
+            "room_id": listing["room_id"],
+            "match_ids": None,
+            "party_a_uid": None,
+            "party_a_room_id": None,
+            "party_b_uid": None,
+            "party_b_room_id": None,
+            "lease_start_date": listing["lease_start_date"],
+            "lease_end_date": listing["lease_end_date"],
+            "initiated_at": now,
+            "completed_at": None,
+            "failed_at": None,
+            "failure_reason": None,
+            "created_at": now,
+            "updated_at": now,
+        }
     transaction.create(tx_ref, tx_data)
 
     match_data["status"] = MatchStatus.ACCEPTED.value
@@ -161,7 +267,7 @@ async def _accept_match_txn(
 async def reject_match(
     db: AsyncClient, match_id: str, owner_uid: str
 ) -> MatchResponse:
-    """Listing owner rejects a match. Reopens the listing."""
+    """Listing owner rejects a match. Listing stays OPEN (bidding model)."""
     transaction = db.transaction()
     return await _reject_match_txn(transaction, db, match_id, owner_uid)
 
@@ -201,13 +307,29 @@ async def _reject_match_txn(
         "version": match_data["version"] + 1,
     })
 
-    # Reopen the listing
-    assert_transition(listing["listing_type"], listing["status"], "OPEN")
-    transaction.update(listing_ref, {
-        "status": "OPEN",
-        "updated_at": now,
-        "version": listing["version"] + 1,
-    })
+    # Only reopen listing if it's not already OPEN (bidding model keeps it OPEN)
+    if listing["status"] != "OPEN":
+        assert_transition(listing["listing_type"], listing["status"], "OPEN")
+        transaction.update(listing_ref, {
+            "status": "OPEN",
+            "updated_at": now,
+            "version": listing["version"] + 1,
+        })
+
+    # For swap legs: also reject the paired match
+    paired_match_id = match_data.get("paired_match_id")
+    if paired_match_id:
+        paired_ref = db.collection("matches").document(paired_match_id)
+        paired_snap = await paired_ref.get(transaction=transaction)
+        if paired_snap.exists:
+            paired_data = paired_snap.to_dict()
+            if paired_data["status"] == MatchStatus.PROPOSED.value:
+                transaction.update(paired_ref, {
+                    "status": MatchStatus.REJECTED.value,
+                    "responded_at": now,
+                    "updated_at": now,
+                    "version": paired_data.get("version", 1) + 1,
+                })
 
     match_data["status"] = MatchStatus.REJECTED.value
     match_data["responded_at"] = now

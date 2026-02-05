@@ -81,10 +81,10 @@ class TestLeaseTransferTransitions:
             LeaseTransferStatus.OPEN, LeaseTransferStatus.COMPLETED
         ) is False
 
-    def test_open_cannot_skip_to_pending_approval(self):
+    def test_open_to_pending_approval_for_bidding(self):
         assert validate_lease_transfer_transition(
             LeaseTransferStatus.OPEN, LeaseTransferStatus.PENDING_APPROVAL
-        ) is False
+        ) is True
 
     def test_matched_cannot_go_to_expired(self):
         assert validate_lease_transfer_transition(
@@ -182,10 +182,10 @@ class TestSwapTransitions:
             SwapRequestStatus.OPEN, SwapRequestStatus.COMPLETED
         ) is False
 
-    def test_open_cannot_skip_to_pending_approval(self):
+    def test_open_to_pending_approval_for_bidding(self):
         assert validate_swap_transition(
             SwapRequestStatus.OPEN, SwapRequestStatus.PENDING_APPROVAL
-        ) is False
+        ) is True
 
     def test_partial_cannot_skip_to_pending_approval(self):
         assert validate_swap_transition(
