@@ -29,6 +29,7 @@ def _to_match_response(doc_id: str, data: dict) -> MatchResponse:
         offered_room_category=data["offered_room_category"],
         offered_room_building=data["offered_room_building"],
         paired_match_id=data.get("paired_match_id"),
+        message=data.get("message"),
         proposed_at=data.get("proposed_at"),
         responded_at=data.get("responded_at"),
         expires_at=data.get("expires_at"),
@@ -375,3 +376,62 @@ async def get_match_contact(
         name=user_data["full_name"],
         phone=user_data.get("phone", ""),
     )
+
+
+async def cancel_match(
+    db: AsyncClient, match_id: str, claimant_uid: str
+) -> MatchResponse:
+    """Claimant cancels their own bid/claim."""
+    transaction = db.transaction()
+    return await _cancel_match_txn(transaction, db, match_id, claimant_uid)
+
+
+@async_transactional
+async def _cancel_match_txn(
+    transaction: AsyncTransaction,
+    db: AsyncClient,
+    match_id: str,
+    claimant_uid: str,
+) -> MatchResponse:
+    match_ref = db.collection("matches").document(match_id)
+    match_snap = await match_ref.get(transaction=transaction)
+    if not match_snap.exists:
+        raise NotFoundError(f"Match {match_id} not found")
+
+    match_data = match_snap.to_dict()
+
+    # Only the claimant can cancel their own bid
+    if match_data["claimant_uid"] != claimant_uid:
+        raise ForbiddenError("Only the claimant can cancel their own bid")
+
+    if match_data["status"] != MatchStatus.PROPOSED.value:
+        raise ConflictError(f"Match is in state {match_data['status']}, not PROPOSED")
+
+    now = datetime.now(timezone.utc)
+
+    # Cancel the match
+    transaction.update(match_ref, {
+        "status": MatchStatus.CANCELLED.value,
+        "responded_at": now,
+        "updated_at": now,
+        "version": match_data["version"] + 1,
+    })
+
+    # For swap legs: also cancel the paired match
+    paired_match_id = match_data.get("paired_match_id")
+    if paired_match_id:
+        paired_ref = db.collection("matches").document(paired_match_id)
+        paired_snap = await paired_ref.get(transaction=transaction)
+        if paired_snap.exists:
+            paired_data = paired_snap.to_dict()
+            if paired_data["status"] == MatchStatus.PROPOSED.value:
+                transaction.update(paired_ref, {
+                    "status": MatchStatus.CANCELLED.value,
+                    "responded_at": now,
+                    "updated_at": now,
+                    "version": paired_data.get("version", 1) + 1,
+                })
+
+    match_data["status"] = MatchStatus.CANCELLED.value
+    match_data["responded_at"] = now
+    return _to_match_response(match_snap.id, match_data)

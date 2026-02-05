@@ -6,6 +6,7 @@ import {
   useListingBids,
 } from "../hooks/useListings";
 import { useAcceptMatch, useRejectMatch } from "../hooks/useMatches";
+import { usePublicProfile } from "../hooks/useProfile";
 import { useAuth } from "../hooks/useAuth";
 import { ListingType, MatchStatus } from "../types";
 import type { MatchResponse } from "../types";
@@ -30,6 +31,9 @@ export default function ListingDetailPage() {
   const isOwner = listing?.owner_uid === user?.uid;
   const isOpen = listing?.status === "OPEN";
 
+  const { data: ownerProfile } = usePublicProfile(
+    !isOwner ? listing?.owner_uid : undefined
+  );
   const { data: bids } = useListingBids(isOwner && isOpen ? id : undefined);
 
   if (isLoading) return <LoadingSpinner />;
@@ -201,6 +205,17 @@ export default function ListingDetailPage() {
           <div className="mt-6">
             <h3 className="text-xs font-medium text-gray-500">Description</h3>
             <p className="mt-1 text-sm text-gray-700">{listing.description}</p>
+          </div>
+        )}
+
+        {!isOwner && ownerProfile && (
+          <div className="mt-6 border-t border-gray-100 pt-4">
+            <p className="text-sm text-gray-600">
+              Created by{" "}
+              <span className="font-medium text-gray-900">
+                {ownerProfile.full_name}
+              </span>
+            </p>
           </div>
         )}
 

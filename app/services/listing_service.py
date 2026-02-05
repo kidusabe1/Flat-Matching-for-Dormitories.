@@ -297,6 +297,7 @@ async def _claim_listing_txn(
         "offered_room_category": listing["room_category"],
         "offered_room_building": listing["room_building"],
         "paired_match_id": None,
+        "message": message,
         "proposed_at": now,
         "responded_at": None,
         "expires_at": now + timedelta(hours=settings.match_expiry_hours),

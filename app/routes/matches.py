@@ -46,6 +46,15 @@ async def reject_match(
     return await match_service.reject_match(db, match_id, user.uid)
 
 
+@router.post("/{match_id}/cancel", response_model=MatchResponse)
+async def cancel_match(
+    match_id: str,
+    user: FirebaseUser = Depends(get_current_user),
+    db: AsyncClient = Depends(get_db),
+):
+    return await match_service.cancel_match(db, match_id, user.uid)
+
+
 @router.get("/{match_id}/contact", response_model=ContactResponse)
 async def get_match_contact(
     match_id: str,

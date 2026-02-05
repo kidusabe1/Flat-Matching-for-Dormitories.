@@ -1,4 +1,10 @@
-import { useMyMatches, useAcceptMatch, useRejectMatch, useMatchContact } from "../hooks/useMatches";
+import {
+  useMyMatches,
+  useAcceptMatch,
+  useRejectMatch,
+  useCancelMatch,
+  useMatchContact,
+} from "../hooks/useMatches";
 import { useAuth } from "../hooks/useAuth";
 import StatusBadge from "../components/StatusBadge";
 import RoomBadge from "../components/RoomBadge";
@@ -37,6 +43,7 @@ export default function MatchesPage() {
   const { data: matches, isLoading } = useMyMatches();
   const acceptMatch = useAcceptMatch();
   const rejectMatch = useRejectMatch();
+  const cancelMatch = useCancelMatch();
   const [error, setError] = useState("");
 
   if (isLoading) return <LoadingSpinner />;
@@ -61,6 +68,15 @@ export default function MatchesPage() {
       await rejectMatch.mutateAsync(id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to reject match");
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    setError("");
+    try {
+      await cancelMatch.mutateAsync(id);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to cancel bid");
     }
   };
 
@@ -108,7 +124,22 @@ export default function MatchesPage() {
               </button>
             </div>
           )}
+          {isProposed && !isIncoming && (
+            <button
+              onClick={() => handleCancel(match.id)}
+              disabled={cancelMatch.isPending}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
+            >
+              {cancelMatch.isPending ? "Cancelling..." : "Cancel Bid"}
+            </button>
+          )}
         </div>
+        {isIncoming && match.message && (
+          <div className="mt-3 border-t border-gray-100 pt-3">
+            <p className="text-xs font-medium text-gray-500">Message from bidder</p>
+            <p className="mt-1 text-sm text-gray-700">{match.message}</p>
+          </div>
+        )}
         {isAccepted && (
           <div className="mt-3 border-t border-gray-100 pt-3">
             <p className="mb-2 text-xs font-medium text-gray-500">

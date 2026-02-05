@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import client from "../api/client";
 import type {
   UserProfile,
+  UserProfilePublic,
   UserProfileCreate,
   UserProfileUpdate,
 } from "../types";
@@ -39,5 +40,16 @@ export function useUpdateProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
+  });
+}
+
+export function usePublicProfile(uid: string | undefined) {
+  return useQuery<UserProfilePublic>({
+    queryKey: ["users", uid],
+    queryFn: async () => {
+      const { data } = await client.get(`/api/v1/users/${uid}`);
+      return data;
+    },
+    enabled: !!uid,
   });
 }

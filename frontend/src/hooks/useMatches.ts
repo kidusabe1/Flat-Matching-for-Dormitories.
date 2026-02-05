@@ -67,3 +67,18 @@ export function useRejectMatch() {
     },
   });
 }
+
+export function useCancelMatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await client.post(`/api/v1/matches/${id}/cancel`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+      queryClient.invalidateQueries({ queryKey: ["myListings"] });
+    },
+  });
+}

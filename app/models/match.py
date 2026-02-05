@@ -19,6 +19,7 @@ class MatchResponse(BaseModel):
     offered_room_category: str
     offered_room_building: str
     paired_match_id: str | None = None
+    message: str | None = None
     proposed_at: datetime | None = None
     responded_at: datetime | None = None
     expires_at: datetime | None = None
