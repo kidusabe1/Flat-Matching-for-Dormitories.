@@ -13,6 +13,7 @@ import MatchesPage from "./pages/MatchesPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import ProfilePage from "./pages/ProfilePage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
   return (
@@ -40,7 +41,9 @@ export default function App() {
           <Route path="matches" element={<MatchesPage />} />
           <Route path="transactions" element={<TransactionsPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
