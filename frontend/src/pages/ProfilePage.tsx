@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useProfile, useUpdateProfile } from "../hooks/useProfile";
 import { useRoom, useRooms } from "../hooks/useRooms";
+import { COUNTRY_CODES, parsePhone, isValidPhoneNumber } from "../utils/phone";
 
 const CATEGORY_LABELS: Record<string, string> = {
   PARK_SHARED_2BR: "Shared 2-Bedroom",
@@ -27,7 +28,8 @@ export default function ProfilePage() {
 
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+972");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [roomId, setRoomId] = useState("");
 
   // Group rooms by building → category, picking one representative room ID per category
@@ -61,15 +63,20 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name);
-      setPhone(profile.phone);
+      const parsed = parsePhone(profile.phone);
+      setCountryCode(parsed.countryCode);
+      setPhoneNumber(parsed.number);
       setRoomId(profile.current_room_id ?? "");
     }
   }, [profile]);
 
+  const phoneValid = isValidPhoneNumber(phoneNumber);
+
   const handleSave = async () => {
+    if (!phoneValid) return;
     await updateProfile.mutateAsync({
       full_name: fullName,
-      phone: phone,
+      phone: countryCode + phoneNumber.replace(/[\s-]/g, ""),
       current_room_id: roomId || undefined,
     });
     setEditing(false);
@@ -78,7 +85,9 @@ export default function ProfilePage() {
   const handleCancel = () => {
     if (profile) {
       setFullName(profile.full_name);
-      setPhone(profile.phone);
+      const parsed = parsePhone(profile.phone);
+      setCountryCode(parsed.countryCode);
+      setPhoneNumber(parsed.number);
       setRoomId(profile.current_room_id ?? "");
     }
     setEditing(false);
@@ -146,17 +155,40 @@ export default function ProfilePage() {
           <DetailRow label="Student ID" value={profile.student_id} />
 
           <div className="flex items-center justify-between px-6 py-4">
-            <div>
+            <div className="w-full">
               <p className="text-sm font-medium text-gray-500">Phone</p>
               {editing ? (
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="mt-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
+                <div className="mt-1 flex gap-2">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  >
+                    {COUNTRY_CODES.map((cc) => (
+                      <option key={cc.code} value={cc.code}>
+                        {cc.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className={`flex-1 rounded-lg border px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 ${
+                      !phoneValid && phoneNumber.length > 0
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    }`}
+                    placeholder="501234567"
+                  />
+                </div>
               ) : (
                 <p className="mt-0.5 text-sm text-gray-900">{profile.phone || "Not set"}</p>
+              )}
+              {editing && !phoneValid && phoneNumber.length > 0 && (
+                <p className="mt-1 text-xs text-red-600">
+                  Enter a valid phone number (7-15 digits).
+                </p>
               )}
             </div>
           </div>
@@ -245,7 +277,7 @@ export default function ProfilePage() {
             </button>
             <button
               onClick={handleSave}
-              disabled={updateProfile.isPending || !fullName.trim() || !phone.trim()}
+              disabled={updateProfile.isPending || !fullName.trim() || !phoneValid}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition"
             >
               {updateProfile.isPending ? "Saving..." : "Save Changes"}

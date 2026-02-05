@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useCreateProfile } from "../hooks/useProfile";
+import { COUNTRY_CODES, isValidPhoneNumber } from "../utils/phone";
 
 export default function OnboardingPage() {
   const { user, setHasProfile } = useAuth();
@@ -9,17 +10,27 @@ export default function OnboardingPage() {
   const createProfile = useCreateProfile();
   const [fullName, setFullName] = useState("");
   const [studentId, setStudentId] = useState("");
-  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+972");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
+
+  const phoneValid = isValidPhoneNumber(phoneNumber);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!phoneValid) {
+      setError("Please enter a valid phone number (7-15 digits).");
+      return;
+    }
+
     try {
       await createProfile.mutateAsync({
         full_name: fullName,
         student_id: studentId,
-        phone,
+        phone: countryCode + phoneNumber.replace(/[\s-]/g, ""),
       });
       setHasProfile(true);
       navigate("/");
@@ -91,19 +102,44 @@ export default function OnboardingPage() {
             </div>
             <div>
               <label
-                htmlFor="phone"
+                htmlFor="phoneNumber"
                 className="block text-sm font-medium text-gray-700"
               >
                 Phone Number
               </label>
-              <input
-                id="phone"
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-              />
+              <div className="mt-1 flex gap-2">
+                <select
+                  id="countryCode"
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="w-28 rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                >
+                  {COUNTRY_CODES.map((cc) => (
+                    <option key={cc.code} value={cc.code}>
+                      {cc.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="phoneNumber"
+                  type="tel"
+                  required
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  onBlur={() => setPhoneTouched(true)}
+                  className={`block flex-1 rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${
+                    phoneTouched && !phoneValid && phoneNumber.length > 0
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  }`}
+                  placeholder="501234567"
+                />
+              </div>
+              {phoneTouched && !phoneValid && phoneNumber.length > 0 && (
+                <p className="mt-1 text-xs text-red-600">
+                  Enter a valid phone number (7-15 digits).
+                </p>
+              )}
             </div>
           </div>
 

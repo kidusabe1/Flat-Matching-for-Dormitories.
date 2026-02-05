@@ -76,7 +76,13 @@ async def create_lease_transfer(
     room = room_doc.to_dict()
 
     if data.lease_end_date <= data.lease_start_date:
-        raise BadRequestError("lease_end_date must be after lease_start_date")
+        raise BadRequestError("Lease end date must be after the start date")
+
+    if data.move_in_date:
+        if data.move_in_date < data.lease_start_date:
+            raise BadRequestError("Transfer date cannot be before the lease start date")
+        if data.move_in_date > data.lease_end_date:
+            raise BadRequestError("Transfer date cannot be after the lease end date")
 
     settings = get_settings()
     now = datetime.now(timezone.utc)
@@ -312,7 +318,13 @@ async def create_swap_request(
     room = room_doc.to_dict()
 
     if data.lease_end_date <= data.lease_start_date:
-        raise BadRequestError("lease_end_date must be after lease_start_date")
+        raise BadRequestError("Lease end date must be after the start date")
+
+    if data.move_in_date:
+        if data.move_in_date < data.lease_start_date:
+            raise BadRequestError("Move-in date cannot be before the lease start date")
+        if data.move_in_date > data.lease_end_date:
+            raise BadRequestError("Move-in date cannot be after the lease end date")
 
     if not data.desired_categories:
         raise BadRequestError("Must specify at least one desired category")

@@ -23,8 +23,8 @@ export function useCreateProfile() {
       const { data } = await client.post("/api/v1/users/profile", profile);
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(["profile"], data);
     },
   });
 }

@@ -37,23 +37,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       setUser(firebaseUser);
       if (firebaseUser) {
-        // Check email verification status
-        try {
-          const { data } = await client.get("/api/v1/auth/verification-status");
-          setEmailVerified(data.verified);
-        } catch {
-          setEmailVerified(false);
-        }
+        // Check verification and profile in parallel
+        const [verRes, profRes] = await Promise.allSettled([
+          client.get("/api/v1/auth/verification-status"),
+          client.get("/api/v1/users/me"),
+        ]);
 
-        // Check profile existence
-        try {
-          await client.get("/api/v1/users/me");
-          setHasProfile(true);
-        } catch {
-          setHasProfile(false);
-        }
+        const verified =
+          verRes.status === "fulfilled" && verRes.value.data.verified;
+        const profileExists = profRes.status === "fulfilled";
+
+        // Users with a profile are established — treat as verified
+        setEmailVerified(verified || profileExists);
+        setHasProfile(profileExists);
       } else {
         setEmailVerified(null);
         setHasProfile(null);

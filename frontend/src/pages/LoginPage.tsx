@@ -6,6 +6,15 @@ import { useAuth } from "../hooks/useAuth";
 
 type Mode = "signIn" | "signUp" | "forgotPassword";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const PASSWORD_RULES = [
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
+  { label: "One number", test: (p: string) => /\d/.test(p) },
+];
+
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -15,17 +24,33 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+
+  const emailValid = EMAIL_REGEX.test(email);
+  const passwordValid =
+    mode !== "signUp" || PASSWORD_RULES.every((r) => r.test(password));
 
   const switchMode = (next: Mode) => {
     setMode(next);
     setError("");
     setSuccess("");
+    setEmailTouched(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    if (!emailValid) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (mode === "signUp" && !passwordValid) {
+      setError("Password does not meet the requirements.");
+      return;
+    }
+
     setLoading(true);
     try {
       if (mode === "forgotPassword") {
@@ -99,9 +124,19 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                onBlur={() => setEmailTouched(true)}
+                className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${
+                  emailTouched && !emailValid && email.length > 0
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                }`}
                 placeholder="you@biu.ac.il"
               />
+              {emailTouched && !emailValid && email.length > 0 && (
+                <p className="mt-1 text-xs text-red-600">
+                  Please enter a valid email address.
+                </p>
+              )}
             </div>
 
             {mode !== "forgotPassword" && (
@@ -116,12 +151,49 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   required
-                  minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  placeholder="At least 6 characters"
+                  placeholder={
+                    mode === "signUp"
+                      ? "Min 8 chars, uppercase, number"
+                      : "Enter your password"
+                  }
                 />
+                {mode === "signUp" && password.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {PASSWORD_RULES.map((rule) => {
+                      const passed = rule.test(password);
+                      return (
+                        <li
+                          key={rule.label}
+                          className={`flex items-center gap-1.5 text-xs ${
+                            passed ? "text-green-600" : "text-gray-400"
+                          }`}
+                        >
+                          <svg
+                            className="h-3.5 w-3.5 flex-shrink-0"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            {passed ? (
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            ) : (
+                              <circle cx="12" cy="12" r="9" />
+                            )}
+                          </svg>
+                          {rule.label}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             )}
           </div>

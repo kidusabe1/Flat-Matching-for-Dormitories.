@@ -17,4 +17,15 @@ client.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Surface the server's error detail as the Error message
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.data?.detail) {
+      error.message = error.response.data.detail;
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default client;

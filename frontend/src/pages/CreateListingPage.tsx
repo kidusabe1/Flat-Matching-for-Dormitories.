@@ -36,6 +36,29 @@ export default function CreateListingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Date validation
+    if (leaseStart && leaseEnd && leaseEnd <= leaseStart) {
+      setError("Lease end date must be after the start date.");
+      return;
+    }
+    if (moveInDate && leaseStart && moveInDate < leaseStart) {
+      setError(
+        tab === "lease"
+          ? "Transfer date cannot be before the lease start date."
+          : "Move-in date cannot be before the lease start date."
+      );
+      return;
+    }
+    if (moveInDate && leaseEnd && moveInDate > leaseEnd) {
+      setError(
+        tab === "lease"
+          ? "Transfer date cannot be after the lease end date."
+          : "Move-in date cannot be after the lease end date."
+      );
+      return;
+    }
+
     try {
       if (tab === "lease") {
         await createLease.mutateAsync({
@@ -168,6 +191,7 @@ export default function CreateListingPage() {
                 type="date"
                 required
                 value={leaseEnd}
+                min={leaseStart || undefined}
                 onChange={(e) => setLeaseEnd(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
@@ -185,6 +209,8 @@ export default function CreateListingPage() {
             <input
               type="date"
               value={moveInDate}
+              min={leaseStart || undefined}
+              max={leaseEnd || undefined}
               onChange={(e) => setMoveInDate(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:max-w-xs"
             />
