@@ -110,7 +110,7 @@ export default function ListingDetailPage() {
               <dt className="text-xs font-medium text-gray-500">
                 Desired Categories
               </dt>
-              <dd className="mt-1 flex gap-1">
+              <dd className="mt-1 flex flex-wrap gap-1">
                 {listing.desired_categories.map((cat) => (
                   <RoomBadge key={cat} category={cat} />
                 ))}

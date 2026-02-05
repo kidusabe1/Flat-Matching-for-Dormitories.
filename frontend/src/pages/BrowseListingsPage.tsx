@@ -41,7 +41,7 @@ export default function BrowseListingsPage() {
             setListingType(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-auto"
         >
           <option value="">All Types</option>
           <option value={ListingType.LEASE_TRANSFER}>Lease Transfer</option>
@@ -54,7 +54,7 @@ export default function BrowseListingsPage() {
             setCategory(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-auto"
         >
           <option value="">All Categories</option>
           <optgroup label="Park 100 Complex">
@@ -81,7 +81,7 @@ export default function BrowseListingsPage() {
             setBuilding(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-auto"
         />
       </div>
 
@@ -109,7 +109,7 @@ export default function BrowseListingsPage() {
           </div>
 
           {/* Pagination */}
-          <div className="mt-6 flex items-center justify-between">
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-gray-500">
               Showing {(page - 1) * limit + 1}–
               {Math.min(page * limit, data.total)} of {data.total}
@@ -118,14 +118,14 @@ export default function BrowseListingsPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={!data.has_next}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
               >
                 Next
               </button>

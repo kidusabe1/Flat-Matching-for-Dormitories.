@@ -71,9 +71,9 @@ export default function MatchesPage() {
 
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <RoomBadge category={match.offered_room_category} />
               <span className="text-sm font-medium text-gray-900">
                 {match.offered_room_building}
@@ -91,18 +91,18 @@ export default function MatchesPage() {
             </p>
           </div>
           {isProposed && isIncoming && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 sm:flex-shrink-0">
               <button
                 onClick={() => handleAccept(match.id)}
                 disabled={acceptMatch.isPending}
-                className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition"
+                className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition"
               >
                 Accept
               </button>
               <button
                 onClick={() => handleReject(match.id)}
                 disabled={rejectMatch.isPending}
-                className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 transition"
+                className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 transition"
               >
                 Reject
               </button>

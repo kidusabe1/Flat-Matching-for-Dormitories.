@@ -113,7 +113,7 @@ export default function VerifyEmailPage() {
           )}
 
           {/* PIN inputs */}
-          <div className="flex justify-center gap-2" onPaste={handlePaste}>
+          <div className="flex justify-center gap-1.5 sm:gap-2" onPaste={handlePaste}>
             {pin.map((digit, i) => (
               <input
                 key={i}
@@ -124,7 +124,7 @@ export default function VerifyEmailPage() {
                 value={digit}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className="h-12 w-12 rounded-lg border border-gray-300 text-center text-xl font-bold text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className="h-11 w-11 rounded-lg border border-gray-300 text-center text-xl font-bold text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:h-12 sm:w-12"
               />
             ))}
           </div>

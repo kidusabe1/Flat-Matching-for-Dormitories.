@@ -49,6 +49,7 @@ export function useMatchContact(matchId: string | undefined, enabled: boolean) {
       return data;
     },
     enabled: !!matchId && enabled,
+    retry: false,
   });
 }
 

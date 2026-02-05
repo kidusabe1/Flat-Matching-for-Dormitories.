@@ -18,6 +18,11 @@ class VerificationStatus(BaseModel):
     verified: bool
 
 
+class AuthStatus(BaseModel):
+    verified: bool
+    has_profile: bool
+
+
 @router.post("/send-verification", response_model=VerificationStatus)
 async def send_verification_pin(
     user: FirebaseUser = Depends(get_current_user),
@@ -47,3 +52,14 @@ async def get_verification_status(
     """Check whether the current user's email is verified."""
     verified = await verification_service.is_verified(db, user.uid)
     return VerificationStatus(verified=verified)
+
+
+@router.get("/status", response_model=AuthStatus)
+async def get_auth_status(
+    user: FirebaseUser = Depends(get_current_user),
+    db: AsyncClient = Depends(get_db),
+):
+    """Combined check: email verified + profile exists. Always returns 200."""
+    verified = await verification_service.is_verified(db, user.uid)
+    profile_doc = await db.collection("users").document(user.uid).get()
+    return AuthStatus(verified=verified, has_profile=profile_doc.exists)

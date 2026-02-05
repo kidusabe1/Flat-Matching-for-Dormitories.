@@ -40,19 +40,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setUser(firebaseUser);
       if (firebaseUser) {
-        // Check verification and profile in parallel
-        const [verRes, profRes] = await Promise.allSettled([
-          client.get("/api/v1/auth/verification-status"),
-          client.get("/api/v1/users/me"),
-        ]);
-
-        const verified =
-          verRes.status === "fulfilled" && verRes.value.data.verified;
-        const profileExists = profRes.status === "fulfilled";
-
-        // Users with a profile are established — treat as verified
-        setEmailVerified(verified || profileExists);
-        setHasProfile(profileExists);
+        try {
+          const { data } = await client.get("/api/v1/auth/status");
+          // Users with a profile are established — treat as verified
+          setEmailVerified(data.verified || data.has_profile);
+          setHasProfile(data.has_profile);
+        } catch {
+          setEmailVerified(false);
+          setHasProfile(false);
+        }
       } else {
         setEmailVerified(null);
         setHasProfile(null);

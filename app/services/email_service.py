@@ -1,8 +1,20 @@
+import asyncio
+import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+
+def _send_smtp(to_email: str, msg: str, settings) -> None:
+    """Blocking SMTP send — runs in a thread pool."""
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
+        server.starttls()
+        server.login(settings.smtp_user, settings.smtp_password)
+        server.sendmail(settings.smtp_from_email, to_email, msg)
 
 
 async def send_verification_email(to_email: str, pin: str) -> None:
@@ -32,7 +44,8 @@ async def send_verification_email(to_email: str, pin: str) -> None:
     msg.attach(MIMEText(text, "plain"))
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-        server.starttls()
-        server.login(settings.smtp_user, settings.smtp_password)
-        server.sendmail(settings.smtp_from_email, to_email, msg.as_string())
+    try:
+        await asyncio.to_thread(_send_smtp, to_email, msg.as_string(), settings)
+    except smtplib.SMTPException as exc:
+        logger.error("SMTP error sending to %s: %s", to_email, exc)
+        raise RuntimeError(f"Failed to send verification email: {exc}") from exc

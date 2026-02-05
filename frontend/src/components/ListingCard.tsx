@@ -35,7 +35,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
         </p>
       </div>
 
-      <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
         <span>
           {new Date(listing.lease_start_date).toLocaleDateString()} —{" "}
           {new Date(listing.lease_end_date).toLocaleDateString()}

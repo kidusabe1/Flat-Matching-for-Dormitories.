@@ -1,11 +1,14 @@
+import logging
 import secrets
 from datetime import datetime, timezone, timedelta
 
 from google.cloud.firestore_v1 import AsyncClient
 
 from app.config import get_settings
-from app.middleware.error_handler import ConflictError, NotFoundError
+from app.middleware.error_handler import AppError, ConflictError, NotFoundError
 from app.services.email_service import send_verification_email
+
+logger = logging.getLogger(__name__)
 
 COLLECTION = "email_verifications"
 
@@ -26,7 +29,7 @@ async def send_pin(db: AsyncClient, uid: str, email: str) -> None:
             not data.get("verified")
             and datetime.now(timezone.utc) < data["expires_at"]
         ):
-            await send_verification_email(email, data["pin"])
+            await _send_email_safe(email, data["pin"])
             return
 
     pin = "".join(secrets.choice("0123456789") for _ in range(6))
@@ -44,7 +47,19 @@ async def send_pin(db: AsyncClient, uid: str, email: str) -> None:
         }
     )
 
-    await send_verification_email(email, pin)
+    await _send_email_safe(email, pin)
+
+
+async def _send_email_safe(email: str, pin: str) -> None:
+    """Send verification email, converting failures to a user-friendly error."""
+    try:
+        await send_verification_email(email, pin)
+    except Exception as exc:
+        logger.error("Failed to send verification email to %s: %s", email, exc)
+        raise AppError(
+            status_code=502,
+            detail="Could not send verification email. Please try again later.",
+        ) from exc
 
 
 async def verify_pin(db: AsyncClient, uid: str, pin: str) -> None:

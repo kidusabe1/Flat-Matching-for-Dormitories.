@@ -79,14 +79,14 @@ export default function Layout() {
         </header>
 
         {/* Mobile nav */}
-        <nav className="flex items-center gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-1 md:hidden">
+        <nav className="flex items-center gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-1.5 md:hidden">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
-                `whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                `whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-medium transition ${
                   isActive
                     ? "bg-blue-100 text-blue-700"
                     : "text-gray-600 hover:bg-gray-100"

@@ -16,7 +16,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   ILANOT_COUPLES: "Couples",
 };
 
-function formatCategory(category: string) {
+function formatCategory(category: string | undefined) {
+  if (!category) return "Unknown";
   return CATEGORY_LABELS[category] ?? category.replace(/_/g, " ");
 }
 
@@ -221,7 +222,7 @@ export default function ProfilePage() {
             <div className="px-6 py-4">
               <p className="text-sm font-medium text-gray-500">Room Details</p>
               <div className="mt-2 rounded-lg bg-gray-50 p-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <span className="text-gray-500">Building:</span>{" "}
                     <span className="font-medium text-gray-900">{currentRoom.building}</span>

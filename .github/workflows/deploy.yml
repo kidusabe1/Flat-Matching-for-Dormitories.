@@ -81,7 +81,8 @@ jobs:
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
-            --env-vars-file env.production.yaml
+            --env-vars-file env.production.yaml \
+            --set-env-vars "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}"
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v4

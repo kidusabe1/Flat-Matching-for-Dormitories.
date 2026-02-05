@@ -203,3 +203,71 @@ class TestVerificationStatus:
         resp = await client.get("/api/v1/auth/verification-status")
         assert resp.status_code == 200
         assert resp.json()["verified"] is False
+
+
+class TestAuthStatus:
+    """Tests for the combined /auth/status endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_new_user_no_records(self, client, mock_db):
+        resp = await client.get("/api/v1/auth/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["verified"] is False
+        assert data["has_profile"] is False
+
+    @pytest.mark.asyncio
+    async def test_verified_with_profile(self, client, mock_db):
+        mock_db.register_doc(
+            "email_verifications",
+            "test-uid-123",
+            {"verified": True},
+        )
+        mock_db.register_doc(
+            "users",
+            "test-uid-123",
+            {
+                "uid": "test-uid-123",
+                "email": "test@biu.ac.il",
+                "full_name": "Test",
+                "student_id": "123",
+                "phone": "+972501234567",
+            },
+        )
+        resp = await client.get("/api/v1/auth/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["verified"] is True
+        assert data["has_profile"] is True
+
+    @pytest.mark.asyncio
+    async def test_verified_no_profile(self, client, mock_db):
+        mock_db.register_doc(
+            "email_verifications",
+            "test-uid-123",
+            {"verified": True},
+        )
+        resp = await client.get("/api/v1/auth/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["verified"] is True
+        assert data["has_profile"] is False
+
+    @pytest.mark.asyncio
+    async def test_legacy_user_unverified_with_profile(self, client, mock_db):
+        mock_db.register_doc(
+            "users",
+            "test-uid-123",
+            {
+                "uid": "test-uid-123",
+                "email": "test@biu.ac.il",
+                "full_name": "Test",
+                "student_id": "123",
+                "phone": "+972501234567",
+            },
+        )
+        resp = await client.get("/api/v1/auth/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["verified"] is False
+        assert data["has_profile"] is True

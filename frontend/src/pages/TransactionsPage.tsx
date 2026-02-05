@@ -57,9 +57,9 @@ function TransactionCard({
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-gray-900">
               {tx.transaction_type === ListingType.LEASE_TRANSFER
                 ? "Lease Transfer"
@@ -89,18 +89,18 @@ function TransactionCard({
           </div>
         </div>
         {isPending && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:flex-shrink-0">
             <button
               onClick={() => onConfirm(tx.id)}
               disabled={confirmPending}
-              className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition"
+              className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition"
             >
               Confirm
             </button>
             <button
               onClick={() => onCancel(tx.id)}
               disabled={cancelPending}
-              className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 transition"
+              className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 transition"
             >
               Cancel
             </button>
