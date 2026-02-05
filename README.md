@@ -90,8 +90,12 @@ tests/
 ├── test_routes_users.py           # User + health endpoints (7 tests)
 ├── test_routes_listings.py        # Listing CRUD + filters (14 tests)
 ├── test_routes_matches.py         # Match get/filter (4 tests)
+├── test_routes_auth.py            # Email verification + auth status (15 tests)
+├── test_match_contact.py          # Match contact info + profile updates (7 tests)
+├── test_bidding.py                # Bidding system (11 tests)
 ├── test_transactions.py           # Transaction get/cancel (5 tests)
-└── test_concurrency.py            # Concurrency guard verification (6 tests)
+├── test_concurrency.py            # Concurrency guard verification (6 tests)
+└── test_404.py                    # Undefined route 404 handling (2 tests)
 ```
 
 ---
@@ -172,7 +176,7 @@ source .venv/bin/activate
 pytest
 ```
 
-All 90 tests should pass. Tests use mocked Firestore — no live database needed.
+All 125 tests should pass. Tests use mocked Firestore — no live database needed.
 
 ---
 
@@ -548,10 +552,23 @@ Even at low traffic, concurrent requests are handled correctly. The `version` fi
 
 ## Testing
 
+### Backend
+
+#### Dev Server
+
+```bash
+source .venv/bin/activate
+uvicorn app.main:app --reload
+```
+
+Runs at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
+
+#### Tests
+
 ```bash
 source .venv/bin/activate
 
-# Run all 90 tests
+# Run all tests
 pytest
 
 # Run with verbose output
@@ -567,7 +584,48 @@ pytest tests/test_matching_engine.py::TestDatesOverlap
 pytest tests/test_routes_listings.py::TestCreateLeaseTransfer::test_create_lease_transfer
 ```
 
-Tests use mocked Firestore — no database or network access required.
+Backend tests use mocked Firestore — no database or network access required.
+
+### Frontend
+
+#### Prerequisites
+
+```bash
+cd frontend
+npm install
+```
+
+#### Dev Server
+
+```bash
+cd frontend
+npm run dev
+```
+
+Opens at `http://localhost:5173` by default (Vite).
+
+#### Type Check
+
+```bash
+cd frontend
+npx tsc --noEmit
+```
+
+#### Lint
+
+```bash
+cd frontend
+npm run lint
+```
+
+#### Production Build
+
+```bash
+cd frontend
+npm run build
+```
+
+This runs `tsc -b && vite build`. The output goes to `frontend/dist/`.
 
 ---
 
