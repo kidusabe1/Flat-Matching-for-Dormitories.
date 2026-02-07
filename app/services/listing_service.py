@@ -480,12 +480,13 @@ async def _claim_swap_txn(
     transaction.create(match1_ref, match1_data)
 
     # Create match: listing owner takes claimant's room (replacement for claimant)
+    # claimant_uid stays as the actual swap initiator (not the target listing owner)
     match2_ref = db.collection("matches").document(swap_bid_id_2)
     match2_data = {
         "match_type": "SWAP_LEG",
         "status": MatchStatus.PROPOSED.value,
         "listing_id": claimant_listing_id,
-        "claimant_uid": listing["owner_uid"],
+        "claimant_uid": claimant_uid,
         "claimant_listing_id": listing_id,
         "offered_room_id": claimant_listing["room_id"],
         "offered_room_category": claimant_listing["room_category"],

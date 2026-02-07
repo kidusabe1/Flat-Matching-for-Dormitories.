@@ -48,10 +48,22 @@ export default function MatchesPage() {
 
   if (isLoading) return <LoadingSpinner />;
 
-  const incoming =
-    matches?.filter((m) => m.claimant_uid !== user?.uid) ?? [];
-  const outgoing =
-    matches?.filter((m) => m.claimant_uid === user?.uid) ?? [];
+  // Deduplicate swap legs: for paired swaps, both matches reference each other.
+  // Keep only one per pair so each swap shows once.
+  const deduplicated = (() => {
+    if (!matches) return [];
+    const ids = new Set(matches.map((m) => m.id));
+    return matches.filter((m) => {
+      if (!m.paired_match_id) return true;
+      // If paired match isn't in our results, keep this one
+      if (!ids.has(m.paired_match_id)) return true;
+      // Both exist: keep the one with smaller ID (deterministic)
+      return m.id < m.paired_match_id;
+    });
+  })();
+
+  const incoming = deduplicated.filter((m) => m.claimant_uid !== user?.uid);
+  const outgoing = deduplicated.filter((m) => m.claimant_uid === user?.uid);
 
   const handleAccept = async (id: string) => {
     setError("");
@@ -162,7 +174,7 @@ export default function MatchesPage() {
         </div>
       )}
 
-      {!matches?.length ? (
+      {!deduplicated.length ? (
         <EmptyState
           title="No matches yet"
           description="Matches will appear here when someone claims your listing or you claim theirs"

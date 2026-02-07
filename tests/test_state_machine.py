@@ -187,10 +187,10 @@ class TestSwapTransitions:
             SwapRequestStatus.OPEN, SwapRequestStatus.PENDING_APPROVAL
         ) is True
 
-    def test_partial_cannot_skip_to_pending_approval(self):
+    def test_partial_to_pending_approval_for_bidding(self):
         assert validate_swap_transition(
             SwapRequestStatus.PARTIAL_MATCH, SwapRequestStatus.PENDING_APPROVAL
-        ) is False
+        ) is True
 
 
 # ──────────────────────────────────────────────────────────
