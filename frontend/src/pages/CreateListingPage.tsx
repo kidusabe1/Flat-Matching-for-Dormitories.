@@ -153,16 +153,15 @@ export default function CreateListingPage() {
                 const seen = new Set<string>();
                 return rooms.data
                   ?.slice()
-                  .sort((a, b) => a.building.localeCompare(b.building))
+                  .sort((a, b) => (categoryLabels[a.category] ?? a.category).localeCompare(categoryLabels[b.category] ?? b.category))
                   .filter((room) => {
-                    const key = `${room.building}|${room.category}`;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
+                    if (seen.has(room.category)) return false;
+                    seen.add(room.category);
                     return true;
                   })
                   .map((room: Room) => (
                     <option key={room.id} value={room.id}>
-                      {room.building} — {categoryLabels[room.category] ?? room.category}
+                      {categoryLabels[room.category] ?? room.category}
                     </option>
                   ));
               })()}
