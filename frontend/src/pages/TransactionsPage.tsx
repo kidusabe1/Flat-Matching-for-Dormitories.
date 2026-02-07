@@ -132,9 +132,19 @@ export default function TransactionsPage() {
     try {
       await confirmTx.mutateAsync(id);
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Failed to confirm transaction"
-      );
+      const message =
+        err instanceof Error ? err.message : "Failed to confirm transaction";
+      // Auto-cancel stale transactions where the room occupant has changed
+      if (message.toLowerCase().includes("occupant has changed")) {
+        try {
+          await cancelTx.mutateAsync(id);
+          setError("This transaction is no longer valid and has been automatically cancelled.");
+          return;
+        } catch {
+          // fall through to show original error
+        }
+      }
+      setError(message);
     }
   };
 

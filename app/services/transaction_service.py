@@ -123,7 +123,13 @@ async def _confirm_lease_transfer_txn(
         raise ConflictError(f"Transaction is {tx_data['status']}, not PENDING")
 
     # Only involved parties can confirm
-    if uid not in (tx_data.get("from_uid"), tx_data.get("to_uid")):
+    involved = [
+        tx_data.get("from_uid"),
+        tx_data.get("to_uid"),
+        tx_data.get("party_a_uid"),
+        tx_data.get("party_b_uid"),
+    ]
+    if uid not in [u for u in involved if u]:
         raise ForbiddenError("You are not a party in this transaction")
 
     now = datetime.now(timezone.utc)
@@ -175,6 +181,19 @@ async def _confirm_lease_transfer_txn(
                     "status": LeaseTransferStatus.COMPLETED.value,
                     "updated_at": now,
                 })
+
+        # Cancel other PENDING transactions for the same room
+        other_txns_query = (
+            db.collection("transactions")
+            .where("room_id", "==", tx_data["room_id"])
+            .where("status", "==", TransactionStatus.PENDING.value)
+        )
+        async for other_doc in other_txns_query.stream():
+            if other_doc.id != tx_id:
+                transaction.update(
+                    db.collection("transactions").document(other_doc.id),
+                    {"status": TransactionStatus.CANCELLED.value, "updated_at": now},
+                )
 
     elif tx_data["transaction_type"] == "SWAP":
         # --- All reads first ---
