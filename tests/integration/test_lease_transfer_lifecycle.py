@@ -15,6 +15,36 @@ class TestLeaseTransferLifecycle:
     """End-to-end lifecycle: create listing → claim → accept → confirm."""
 
     @pytest.mark.asyncio
+    async def test_rebid_after_cancel(self, client, mock_db):
+        """Regression: User B cancels bid, then re-bids → should succeed (not 409)."""
+        listing = make_listing_data(
+            owner_uid="owner-user",
+            status="OPEN",
+            listing_type="LEASE_TRANSFER",
+        )
+        mock_db.register_doc("listings", "listing-rebid", listing)
+        
+        # Existing CANCELLED bid
+        bid_id = "listing-rebid_test-uid-123" # Deterministic ID: listing_id + claimant_uid
+        cancelled_bid = make_match_data(
+            status="CANCELLED",
+            listing_id="listing-rebid",
+            claimant_uid="test-uid-123",
+        )
+        mock_db.register_doc("matches", bid_id, cancelled_bid)
+
+        # Act: Re-claim
+        resp = await client.post("/api/v1/listings/listing-rebid/claim", json={
+            "message": "I want this room again!",
+        })
+        
+        # Assert: Should be 200 OK, not 409 Conflict
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "PROPOSED"
+
+
+    @pytest.mark.asyncio
     async def test_create_listing_returns_open(self, client, mock_db):
         """Step 1: User A creates a lease transfer listing → OPEN."""
         mock_db.register_doc("rooms", "room-1", make_room_data(occupant_uid="test-uid-123"))

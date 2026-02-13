@@ -319,7 +319,7 @@ async def _claim_listing_txn(
         "created_at": now,
         "updated_at": now,
     }
-    transaction.create(match_ref, match_data)
+    transaction.set(match_ref, match_data)
 
     match_data["id"] = match_ref.id
     match_data["_owner_uid"] = listing["owner_uid"]
@@ -503,7 +503,7 @@ async def _claim_swap_txn(
         "created_at": now,
         "updated_at": now,
     }
-    transaction.create(match1_ref, match1_data)
+    transaction.set(match1_ref, match1_data)
 
     # Create match: listing owner takes claimant's room (replacement for claimant)
     # claimant_uid stays as the actual swap initiator (not the target listing owner)
@@ -525,7 +525,7 @@ async def _claim_swap_txn(
         "created_at": now,
         "updated_at": now,
     }
-    transaction.create(match2_ref, match2_data)
+    transaction.set(match2_ref, match2_data)
 
     # Listings stay at their current status (OPEN/PARTIAL_MATCH) — bidding model
     return {
