@@ -27,7 +27,7 @@ async def get_transaction(
     user: FirebaseUser = Depends(get_current_user),
     db: AsyncClient = Depends(get_db),
 ):
-    return await transaction_service.get_transaction(db, tx_id)
+    return await transaction_service.get_transaction(db, tx_id, user.uid)
 
 
 @router.post("/{tx_id}/confirm", response_model=TransactionResponse)

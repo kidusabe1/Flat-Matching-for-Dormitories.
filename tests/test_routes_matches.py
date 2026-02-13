@@ -33,6 +33,8 @@ class TestGetMatch:
     async def test_get_match(self, client, mock_db):
         match = make_match_data()
         mock_db.register_doc("matches", "match-1", match)
+        # Register the listing so ownership check finds the listing owner
+        mock_db.register_doc("listings", "listing-1", make_listing_data(owner_uid="test-uid-123"))
 
         resp = await client.get("/api/v1/matches/match-1")
         assert resp.status_code == 200
@@ -44,3 +46,12 @@ class TestGetMatch:
     async def test_get_match_not_found(self, client, mock_db):
         resp = await client.get("/api/v1/matches/nonexistent")
         assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_get_match_forbidden_not_party(self, client, mock_db):
+        match = make_match_data(claimant_uid="other-user")
+        mock_db.register_doc("matches", "match-1", match)
+        mock_db.register_doc("listings", "listing-1", make_listing_data(owner_uid="another-user"))
+
+        resp = await client.get("/api/v1/matches/match-1")
+        assert resp.status_code == 403

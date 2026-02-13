@@ -2,11 +2,19 @@ from datetime import datetime, timezone
 
 from google.cloud.firestore_v1 import AsyncClient
 
-from app.middleware.error_handler import NotFoundError
+from app.middleware.error_handler import ForbiddenError, NotFoundError
 from app.models.room import Room, RoomCreate, RoomUpdate
 
 
-async def create_room(db: AsyncClient, data: RoomCreate) -> Room:
+async def _assert_admin(db: AsyncClient, uid: str) -> None:
+    """Raise ForbiddenError unless the user has the admin role."""
+    user_doc = await db.collection("users").document(uid).get()
+    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
+        raise ForbiddenError("Only administrators can manage rooms")
+
+
+async def create_room(db: AsyncClient, data: RoomCreate, requester_uid: str) -> Room:
+    await _assert_admin(db, requester_uid)
     now = datetime.now(timezone.utc)
     doc_data = {
         "building": data.building,
@@ -50,7 +58,10 @@ async def list_rooms(
     return rooms
 
 
-async def update_room(db: AsyncClient, room_id: str, data: RoomUpdate) -> Room:
+async def update_room(
+    db: AsyncClient, room_id: str, data: RoomUpdate, requester_uid: str
+) -> Room:
+    await _assert_admin(db, requester_uid)
     doc_ref = db.collection("rooms").document(room_id)
     doc = await doc_ref.get()
     if not doc.exists:

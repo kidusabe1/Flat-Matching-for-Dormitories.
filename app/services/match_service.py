@@ -38,11 +38,19 @@ def _to_match_response(doc_id: str, data: dict) -> MatchResponse:
     )
 
 
-async def get_match(db: AsyncClient, match_id: str) -> MatchResponse:
+async def get_match(db: AsyncClient, match_id: str, requester_uid: str) -> MatchResponse:
     doc = await db.collection("matches").document(match_id).get()
     if not doc.exists:
         raise NotFoundError(f"Match {match_id} not found")
-    return _to_match_response(doc.id, doc.to_dict())
+    data = doc.to_dict()
+
+    # Verify the requester is a party to this match
+    listing_doc = await db.collection("listings").document(data["listing_id"]).get()
+    listing_owner = listing_doc.to_dict()["owner_uid"] if listing_doc.exists else None
+    if data["claimant_uid"] != requester_uid and listing_owner != requester_uid:
+        raise ForbiddenError("You are not a party to this match")
+
+    return _to_match_response(doc.id, data)
 
 
 async def get_user_matches(

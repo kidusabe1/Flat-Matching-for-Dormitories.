@@ -25,7 +25,7 @@ async def get_match(
     user: FirebaseUser = Depends(get_current_user),
     db: AsyncClient = Depends(get_db),
 ):
-    return await match_service.get_match(db, match_id)
+    return await match_service.get_match(db, match_id, user.uid)
 
 
 @router.post("/{match_id}/accept", response_model=MatchResponse)

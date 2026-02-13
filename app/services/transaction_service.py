@@ -49,11 +49,23 @@ def _to_transaction_response(doc_id: str, data: dict) -> TransactionResponse:
     )
 
 
-async def get_transaction(db: AsyncClient, tx_id: str) -> TransactionResponse:
+async def get_transaction(db: AsyncClient, tx_id: str, requester_uid: str) -> TransactionResponse:
     doc = await db.collection("transactions").document(tx_id).get()
     if not doc.exists:
         raise NotFoundError(f"Transaction {tx_id} not found")
-    return _to_transaction_response(doc.id, doc.to_dict())
+    data = doc.to_dict()
+
+    # Verify the requester is a party to this transaction
+    involved = [
+        data.get("from_uid"),
+        data.get("to_uid"),
+        data.get("party_a_uid"),
+        data.get("party_b_uid"),
+    ]
+    if requester_uid not in [u for u in involved if u]:
+        raise ForbiddenError("You are not a party in this transaction")
+
+    return _to_transaction_response(doc.id, data)
 
 
 async def get_user_transactions(

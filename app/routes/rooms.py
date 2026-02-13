@@ -16,7 +16,7 @@ async def create_room(
     user: FirebaseUser = Depends(get_current_user),
     db: AsyncClient = Depends(get_db),
 ):
-    return await room_service.create_room(db, data)
+    return await room_service.create_room(db, data, user.uid)
 
 
 @router.get("", response_model=list[Room])
@@ -45,4 +45,4 @@ async def update_room(
     user: FirebaseUser = Depends(get_current_user),
     db: AsyncClient = Depends(get_db),
 ):
-    return await room_service.update_room(db, room_id, data)
+    return await room_service.update_room(db, room_id, data, user.uid)
