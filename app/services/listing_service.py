@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, date, timezone, timedelta
 
 from google.cloud.firestore_v1 import AsyncClient, async_transactional, AsyncTransaction
@@ -12,6 +13,7 @@ from app.middleware.error_handler import (
 from app.models.enums import LeaseTransferStatus, ListingType, MatchStatus, SwapRequestStatus
 from app.models.listing import LeaseTransferCreate, ListingResponse, ListingUpdate, SwapRequestCreate
 from app.state_machine.transitions import assert_transition
+from app.services import notification_service
 
 
 def _to_listing_response(doc_id: str, data: dict) -> ListingResponse:
@@ -243,7 +245,19 @@ async def claim_listing(
 ) -> dict:
     """Atomically claim a lease transfer listing using a Firestore transaction."""
     transaction = db.transaction()
-    return await _claim_listing_txn(transaction, db, listing_id, claimant_uid, message)
+    result = await _claim_listing_txn(transaction, db, listing_id, claimant_uid, message)
+
+    # Fire-and-forget email notification to the listing owner
+    asyncio.create_task(notification_service.notify_new_bid(
+        db,
+        owner_uid=result.pop("_owner_uid", ""),
+        claimant_uid=claimant_uid,
+        listing_id=listing_id,
+        room_building=result.get("offered_room_building"),
+        room_number=None,
+    ))
+
+    return result
 
 
 @async_transactional
@@ -308,6 +322,7 @@ async def _claim_listing_txn(
     transaction.create(match_ref, match_data)
 
     match_data["id"] = match_ref.id
+    match_data["_owner_uid"] = listing["owner_uid"]
     return match_data
 
 
@@ -383,9 +398,20 @@ async def claim_swap(
 ) -> dict:
     """Atomically claim a swap listing. Both parties must have swap listings."""
     transaction = db.transaction()
-    return await _claim_swap_txn(
+    result = await _claim_swap_txn(
         transaction, db, listing_id, claimant_uid, claimant_listing_id
     )
+
+    # Fire-and-forget email notification to the target listing owner
+    asyncio.create_task(notification_service.notify_swap_bid(
+        db,
+        owner_uid=result.pop("_owner_uid", ""),
+        claimant_uid=claimant_uid,
+        listing_id=listing_id,
+        offered_category=result.get("match_1", {}).get("offered_room_category"),
+    ))
+
+    return result
 
 
 @async_transactional
@@ -507,4 +533,5 @@ async def _claim_swap_txn(
         "match_2": {**match2_data, "id": match2_ref.id},
         "listing_status": listing["status"],
         "claimant_listing_status": claimant_listing["status"],
+        "_owner_uid": listing["owner_uid"],
     }

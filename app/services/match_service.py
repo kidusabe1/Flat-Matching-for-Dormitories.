@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 
 from google.cloud.firestore_v1 import AsyncClient, async_transactional, AsyncTransaction
@@ -15,6 +16,7 @@ from app.models.enums import (
 )
 from app.models.match import ContactResponse, MatchResponse
 from app.state_machine.transitions import assert_transition
+from app.services import notification_service
 
 
 def _to_match_response(doc_id: str, data: dict) -> MatchResponse:
@@ -113,7 +115,17 @@ async def accept_match(
 ) -> MatchResponse:
     """Listing owner accepts a match proposal. Creates a transaction."""
     transaction = db.transaction()
-    return await _accept_match_txn(transaction, db, match_id, owner_uid)
+    result = await _accept_match_txn(transaction, db, match_id, owner_uid)
+
+    # Fire-and-forget: notify claimant their bid was accepted
+    asyncio.create_task(notification_service.notify_bid_accepted(
+        db,
+        claimant_uid=result.claimant_uid,
+        listing_id=result.listing_id,
+        room_building=result.offered_room_building,
+    ))
+
+    return result
 
 
 @async_transactional
@@ -301,7 +313,17 @@ async def reject_match(
 ) -> MatchResponse:
     """Listing owner rejects a match. Listing stays OPEN (bidding model)."""
     transaction = db.transaction()
-    return await _reject_match_txn(transaction, db, match_id, owner_uid)
+    result = await _reject_match_txn(transaction, db, match_id, owner_uid)
+
+    # Fire-and-forget: notify claimant their bid was rejected
+    asyncio.create_task(notification_service.notify_bid_rejected(
+        db,
+        claimant_uid=result.claimant_uid,
+        listing_id=result.listing_id,
+        room_building=result.offered_room_building,
+    ))
+
+    return result
 
 
 @async_transactional

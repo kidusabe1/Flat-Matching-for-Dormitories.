@@ -17,13 +17,26 @@ def _send_smtp(to_email: str, msg: str, settings) -> None:
         server.sendmail(settings.smtp_from_email, to_email, msg)
 
 
-async def send_verification_email(to_email: str, pin: str) -> None:
+async def send_html_email(to_email: str, subject: str, text: str, html: str) -> None:
+    """Send an email with both plain-text and HTML parts."""
     settings = get_settings()
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "BIU Dorm Exchange - Email Verification"
+    msg["Subject"] = subject
     msg["From"] = settings.smtp_from_email
     msg["To"] = to_email
+    msg.attach(MIMEText(text, "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        await asyncio.to_thread(_send_smtp, to_email, msg.as_string(), settings)
+    except smtplib.SMTPException as exc:
+        logger.error("SMTP error sending to %s: %s", to_email, exc)
+        raise RuntimeError(f"Failed to send email: {exc}") from exc
+
+
+async def send_verification_email(to_email: str, pin: str) -> None:
+    settings = get_settings()
 
     text = f"Your verification PIN is: {pin}\n\nThis PIN expires in {settings.verification_pin_expiry_minutes} minutes."
 
@@ -41,11 +54,5 @@ async def send_verification_email(to_email: str, pin: str) -> None:
     </div>
     """
 
-    msg.attach(MIMEText(text, "plain"))
-    msg.attach(MIMEText(html, "html"))
+    await send_html_email(to_email, "BIU Dorm Exchange - Email Verification", text, html)
 
-    try:
-        await asyncio.to_thread(_send_smtp, to_email, msg.as_string(), settings)
-    except smtplib.SMTPException as exc:
-        logger.error("SMTP error sending to %s: %s", to_email, exc)
-        raise RuntimeError(f"Failed to send verification email: {exc}") from exc
