@@ -210,6 +210,16 @@ export default function LoginPage() {
             </div>
           )}
 
+          {mode === "signUp" && (
+            <div className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">
+              <p className="font-semibold mb-1">⚠️ Security Disclaimer</p>
+              This is a student project in early development. Please use a{" "}
+              <strong>new, unique password</strong> (not one you use elsewhere)
+              and consider using a <strong>burner email</strong>. The platform
+              owner is not liable for any data breaches.
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
